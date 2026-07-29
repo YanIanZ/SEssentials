@@ -39,17 +39,28 @@ public final class SEssentialsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
         Selib.init(this);
 
-        modules.addAll(Modules.all());
         int enabled = 0;
-        for (EssModule module : modules) {
+        int skipped = 0;
+        for (EssModule module : Modules.all()) {
+            // Per-module on/off switch: config `modules.<name>: false` disables a module
+            // (defaults to enabled). Lets admins trim the suite like CMI's module toggles.
+            if (!getConfig().getBoolean("modules." + module.name(), true)) {
+                skipped++;
+                continue;
+            }
             try {
                 module.enable(this);
+                modules.add(module);
                 enabled++;
             } catch (Exception ex) {
                 getLogger().severe("Module '" + module.name() + "' failed to enable: " + ex.getMessage());
             }
         }
+        if (skipped > 0) {
+            getLogger().info(skipped + " module(s) disabled via config.");
+        }
 
+        economy.logStatus(this);
         banner(enabled);
     }
 

@@ -9,6 +9,19 @@
 prefix: "<gradient:#43C6AC:#4FC3F7><bold>SEssentials</bold></gradient> <dark_gray>» "
 
 # ----------------------------------------------------------------------------
+#  Module toggles
+#  Every feature module is ON by default. To disable one, add its name here set
+#  to false — e.g. to turn off the fun and lottery modules:
+#     modules:
+#       fun: false
+#       lottery: false
+#  Module names are the lowercase group names (home, warp, economy, moderation,
+#  chat, hpbar, kits, worldtime, …). A disabled module registers no commands or
+#  listeners. Anything not listed stays enabled.
+# ----------------------------------------------------------------------------
+modules: {}
+
+# ----------------------------------------------------------------------------
 #  Homes & warps
 # ----------------------------------------------------------------------------
 

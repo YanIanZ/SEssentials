@@ -128,7 +128,10 @@ public final class WorldTimeModule implements EssModule {
         }
         World world = player.getWorld();
         long t = ticks;
-        Bukkit.getRegionScheduler().execute(plugin, world, 0, 0, () -> world.setTime(t));
+        // On Folia the day-time is GLOBAL-region state (not owned by any chunk region),
+        // so setTime must run on the global region thread — the per-region scheduler
+        // throws "Cannot modify time off of the global region".
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> world.setTime(t));
         Msg.value(sender, "Time set to", value);
         return 1;
     }
@@ -159,7 +162,8 @@ public final class WorldTimeModule implements EssModule {
                 return 0;
             }
         }
-        Bukkit.getRegionScheduler().execute(plugin, world, 0, 0, () -> {
+        // Weather is also GLOBAL-region state on Folia — must run on the global thread.
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
             world.setStorm(storm);
             world.setThundering(thunder);
         });

@@ -147,7 +147,8 @@ final class WorldOps {
     static int setSpawn(SEssentialsPlugin plugin, Player player) {
         World world = player.getWorld();
         Location location = player.getLocation();
-        Bukkit.getRegionScheduler().execute(plugin, world, 0, 0, () -> {
+        // World spawn is global-region metadata on Folia — set it on the global thread.
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
             boolean applied = world.setSpawnLocation(location);
             if (applied) {
                 Msg.ok(player, "Spawn for \"" + world.getName() + "\" set to your location.");
@@ -184,7 +185,8 @@ final class WorldOps {
             return 0;
         }
         World targetWorld = world;
-        Bukkit.getRegionScheduler().execute(plugin, targetWorld, 0, 0, () -> {
+        // Gamerules are global-region state on Folia — set them on the global thread.
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
             boolean applied = applyGameRule(targetWorld, rule, value);
             if (applied) {
                 Msg.value(sender, "Gamerule " + rule.getName() + " (" + targetWorld.getName() + ") set to", value);
