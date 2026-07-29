@@ -33,7 +33,16 @@ final class Modules {
                 new dev.iyanz.sessentials.module.ignore.IgnoreModule(),
                 new dev.iyanz.sessentials.module.playtime.PlaytimeModule(),
                 new dev.iyanz.sessentials.module.info.InfoModule(),
-                new dev.iyanz.sessentials.module.worlds.WorldsModule()
+                new dev.iyanz.sessentials.module.worlds.WorldsModule(),
+                new dev.iyanz.sessentials.module.chat.ChatModule(),
+                new dev.iyanz.sessentials.module.inspect.InspectModule(),
+                new dev.iyanz.sessentials.module.fun.FunModule(),
+                new dev.iyanz.sessentials.module.warnings.WarningsModule(),
+                new dev.iyanz.sessentials.module.combat.CombatModule(),
+                new dev.iyanz.sessentials.module.econextra.EconExtraModule(),
+                new dev.iyanz.sessentials.module.utility2.Utility2Module(),
+                new dev.iyanz.sessentials.module.scavenger.ScavengerModule(),
+                new dev.iyanz.sessentials.module.exp.ExpModule()
         );
     }
 }

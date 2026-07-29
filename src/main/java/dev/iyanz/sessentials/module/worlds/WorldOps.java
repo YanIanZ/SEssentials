@@ -185,7 +185,7 @@ final class WorldOps {
         }
         World targetWorld = world;
         Bukkit.getRegionScheduler().execute(plugin, targetWorld, 0, 0, () -> {
-            boolean applied = targetWorld.setGameRuleValue(rule.getName(), value);
+            boolean applied = applyGameRule(targetWorld, rule, value);
             if (applied) {
                 Msg.value(sender, "Gamerule " + rule.getName() + " (" + targetWorld.getName() + ") set to", value);
             } else {
@@ -193,6 +193,54 @@ final class WorldOps {
             }
         });
         return 1;
+    }
+
+    /**
+     * Parses {@code rawValue} into {@code rule}'s value type (currently {@link Boolean} or
+     * {@link Integer}, the only types Bukkit's built-in gamerules use) and applies it.
+     *
+     * @return {@code false} if the rule's type is unsupported or the value doesn't parse
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> boolean applyGameRule(World world, GameRule<T> rule, String rawValue) {
+        Class<T> type = rule.getType();
+        T value;
+        if (type == Boolean.class) {
+            Boolean parsed = parseBoolean(rawValue);
+            if (parsed == null) {
+                return false;
+            }
+            value = (T) parsed;
+        } else if (type == Integer.class) {
+            Integer parsed = parseInteger(rawValue);
+            if (parsed == null) {
+                return false;
+            }
+            value = (T) parsed;
+        } else {
+            return false;
+        }
+        return world.setGameRule(rule, value);
+    }
+
+    /** @return {@code true}/{@code false} for a matching literal (case-insensitive), else {@code null}. */
+    private static Boolean parseBoolean(String raw) {
+        if ("true".equalsIgnoreCase(raw)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equalsIgnoreCase(raw)) {
+            return Boolean.FALSE;
+        }
+        return null;
+    }
+
+    /** @return the parsed integer, or {@code null} if {@code raw} isn't a valid integer. */
+    private static Integer parseInteger(String raw) {
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     /** A numeric seed is parsed as-is; any other text seed is hashed into a long, like vanilla does. */
