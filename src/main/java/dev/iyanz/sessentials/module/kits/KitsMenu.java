@@ -5,98 +5,111 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
-import dev.iyanz.sessentials.gui.ItemBuilder;
-import dev.iyanz.sessentials.gui.Menu;
+import dev.iyanz.sessentials.selib.gui.ItemBuilder;
+import dev.iyanz.sessentials.selib.gui.PagedMenu;
 import dev.iyanz.sessentials.util.Msg;
+import dev.iyanz.sessentials.util.SmallCaps;
+import dev.iyanz.sessentials.util.Sounds;
 import dev.iyanz.sessentials.util.Style;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Chest GUI listing the kits {@code viewer} has permission to use: one chest icon
- * per kit, its lore showing whether it's ready or the remaining cooldown, clicking
- * claims it.
+ * SELIB {@link PagedMenu} listing every defined kit: one entry per kit, its icon drawn from the
+ * kit's first item (or a {@link Material#CHEST} fallback), its lore summarising the contents and
+ * showing the live claim status — available, on cooldown, or locked by permission. Claimable kits
+ * glow and can be claimed with a click.
  *
- * <p>All cooldown bookkeeping and item-granting is delegated to {@link KitService}
- * (the same methods {@link KitCommands} calls for {@code /kit}), so this menu never
- * re-implements that logic — it only checks the current status and reacts.</p>
+ * <p>All cooldown bookkeeping and item-granting is delegated to {@link KitService} (the same
+ * methods {@link KitCommands} calls for {@code /kit}), so this menu never re-implements that
+ * logic — it only reads the current status and reacts. Because {@link #entries()} is recomputed on
+ * every (re)build, paging always reflects up-to-date permission and cooldown state.</p>
  *
  * <p>Opened by {@code /kits} (alias {@code /kitlist}); see {@link KitsModule} /
  * {@link KitCommands}.</p>
  */
-public final class KitsMenu extends Menu {
+public final class KitsMenu extends PagedMenu {
 
-    private static final int COLUMNS = 9;
-    private static final int MAX_ROWS = 6;
+    private static final int ROWS = 6;
 
     private final KitService service;
-    private final List<String> names;
 
-    private KitsMenu(SEssentialsPlugin plugin, Player viewer, KitService service, List<String> names) {
-        super(plugin, viewer, MM.deserialize(Style.title("Kits")), rows(names.size()));
+    private KitsMenu(SEssentialsPlugin plugin, Player viewer, KitService service) {
+        super(plugin, viewer, MM.deserialize(Style.title("Kits")), ROWS);
         this.service = service;
-        this.names = names;
     }
 
     /**
-     * Builds and opens the kits menu for {@code viewer}, showing only the kits they
-     * have permission to use ({@code sessentials.kit.<name>}). Sends an
-     * informational message instead of an empty menu if none are available.
+     * Builds and opens the paginated kits browser for {@code viewer}, listing every defined kit
+     * (each entry reflects whether the viewer may claim it). Sends an informational message
+     * instead of an empty menu when no kits are defined at all.
      *
      * @param plugin  the owning plugin
      * @param service the shared kit service (definitions + cooldowns)
      * @param viewer  the player to show the menu to
      */
     public static void open(SEssentialsPlugin plugin, KitService service, Player viewer) {
-        List<String> names = new ArrayList<>();
-        for (String name : service.names()) {
-            if (viewer.hasPermission(KitService.permission(name))) {
-                names.add(name);
-            }
-        }
-        if (names.isEmpty()) {
-            Msg.info(viewer, "There are no kits available to you.");
+        if (service.names().isEmpty()) {
+            Msg.info(viewer, "There are no kits available.");
             return;
         }
-        new KitsMenu(plugin, viewer, service, names).open();
+        new KitsMenu(plugin, viewer, service).open();
     }
 
     @Override
-    protected void build() {
-        int size = Math.min(names.size(), MAX_ROWS * COLUMNS);
-        for (int slot = 0; slot < size; slot++) {
-            String name = names.get(slot);
-            set(slot, icon(name), event -> claim(name));
+    protected List<PageEntry> entries() {
+        List<PageEntry> out = new ArrayList<>();
+        for (String name : service.names()) {
+            out.add(entryFor(name));
         }
+        return out;
     }
 
-    /** Builds the chest icon for kit {@code name}, coloured and labelled by its live cooldown status. */
-    private ItemStack icon(String name) {
+    /** Builds the page entry for kit {@code name}, coloured and glowing by its live claim status. */
+    private PageEntry entryFor(String name) {
+        boolean permitted = viewer.hasPermission(KitService.permission(name));
         long remaining = service.remainingSeconds(viewer.getUniqueId(), name);
-        boolean ready = remaining <= 0;
-        String color = ready ? Style.DEPOSIT : Style.DANGER;
-        String status = ready ? "Ready" : KitService.formatDuration(remaining);
+        boolean claimable = permitted && remaining <= 0;
+
+        Optional<Kit> kitOpt = service.get(name);
+        List<ItemStack> items = kitOpt.isPresent() ? kitOpt.get().items() : List.of();
+        Material iconMaterial = !items.isEmpty() && items.get(0) != null
+                ? items.get(0).getType()
+                : Material.CHEST;
+        String nameColor = claimable ? Style.DEPOSIT : (permitted ? Style.DANGER : Style.GRAY);
 
         List<String> lore = new ArrayList<>();
-        lore.add(Style.lore("Cooldown: " + status));
-        if (ready) {
-            lore.add(Style.hint("Click to claim"));
+        lore.add(Style.lore(items.size() + " item(s)"));
+        if (!permitted) {
+            lore.add(Style.BAD + SmallCaps.of("No permission"));
+        } else if (remaining > 0) {
+            lore.add(Style.BAD + SmallCaps.of("On cooldown: ") + KitService.formatDuration(remaining));
+        } else {
+            lore.add(Style.OK + SmallCaps.of("Available — click to claim"));
         }
 
-        return new ItemBuilder(Material.CHEST)
-                .name(Style.button(color, name))
+        ItemBuilder builder = new ItemBuilder(iconMaterial)
+                .name(Style.button(nameColor, name))
                 .lore(lore)
-                .clean()
-                .build();
+                .clean();
+        if (claimable) {
+            builder.glow();
+        }
+        return new PageEntry(builder.build(), event -> claim(name));
     }
 
     /**
-     * Re-checks the kit's cooldown at click time (the lore may be stale) and, if
-     * ready, starts its cooldown and grants its items via {@link KitService};
-     * otherwise errors via {@link Msg}, exactly like {@code /kit <name>}.
+     * Re-checks the kit's permission and cooldown at click time (the lore may be stale) and, if
+     * claimable, starts its cooldown and grants its items via {@link KitService} — exactly like
+     * {@code /kit <name>} — then closes with a success chime. Otherwise it only errors via
+     * {@link Msg} and keeps the menu open.
      */
     private void claim(String name) {
+        if (!viewer.hasPermission(KitService.permission(name))) {
+            Msg.err(viewer, "You don't have access to kit " + name + ".");
+            return;
+        }
         long remaining = service.remainingSeconds(viewer.getUniqueId(), name);
         if (remaining > 0) {
             Msg.err(viewer, "Kit " + name + " is on cooldown for " + KitService.formatDuration(remaining) + ".");
@@ -111,11 +124,7 @@ public final class KitsMenu extends Menu {
         service.startCooldown(viewer.getUniqueId(), name, kit.cooldownSeconds());
         service.grant(viewer, kit.items());
         Msg.ok(viewer, "You received kit " + name + ".");
+        Sounds.coins(viewer);
         viewer.closeInventory();
-    }
-
-    /** @return a row count (1-{@value #MAX_ROWS}) sized to fit {@code kitCount} icons. */
-    private static int rows(int kitCount) {
-        return Math.max(1, Math.min(MAX_ROWS, (kitCount + COLUMNS - 1) / COLUMNS));
     }
 }

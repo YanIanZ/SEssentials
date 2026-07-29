@@ -114,7 +114,8 @@ final class Modules {
                 new dev.iyanz.sessentials.module.kittycannon.KittyCannonModule(),
                 new dev.iyanz.sessentials.module.expbottle.ExpBottleModule(),
                 new dev.iyanz.sessentials.module.vitals.VitalsModule(),
-                new dev.iyanz.sessentials.module.lockdown.LockdownModule()
+                new dev.iyanz.sessentials.module.lockdown.LockdownModule(),
+                new dev.iyanz.sessentials.module.menus.MenusModule()
         );
     }
 }

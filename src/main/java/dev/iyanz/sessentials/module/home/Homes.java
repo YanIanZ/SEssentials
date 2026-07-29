@@ -7,6 +7,7 @@ import java.util.UUID;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.store.YamlStore;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 /**
@@ -49,6 +50,20 @@ final class Homes {
     /** @return whether {@code uuid} already has a home named {@code name}. */
     static boolean exists(SEssentialsPlugin plugin, UUID uuid, String name) {
         return store(plugin).contains(path(uuid, name));
+    }
+
+    /**
+     * Resolves the menu icon for {@code uuid}'s home named {@code name}. If an optional
+     * per-home icon material is stored at {@code "<uuid>.home-icons.<name>"} it is used;
+     * otherwise (unset or unrecognised) the default {@link Material#RED_BED} is returned.
+     * Read-only and additive — the location storage format is untouched.
+     *
+     * @return the stored icon material, or {@link Material#RED_BED} as a fallback
+     */
+    static Material icon(SEssentialsPlugin plugin, UUID uuid, String name) {
+        String raw = store(plugin).getString(uuid + ".home-icons." + name.toLowerCase(Locale.ROOT));
+        Material material = raw == null ? null : Material.matchMaterial(raw);
+        return material != null ? material : Material.RED_BED;
     }
 
     /** Saves {@code location} as {@code uuid}'s home named {@code name} and persists the store. */

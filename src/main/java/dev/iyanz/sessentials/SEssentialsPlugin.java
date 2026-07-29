@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import dev.iyanz.sessentials.api.EssModule;
 import dev.iyanz.sessentials.economy.EconomyHook;
 import dev.iyanz.sessentials.gui.MenuListener;
+import dev.iyanz.sessentials.selib.Selib;
 import dev.iyanz.sessentials.store.Stores;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.Commands;
@@ -36,6 +37,7 @@ public final class SEssentialsPlugin extends JavaPlugin {
         this.stores = new Stores(this);
 
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
+        Selib.init(this);
 
         modules.addAll(Modules.all());
         int enabled = 0;

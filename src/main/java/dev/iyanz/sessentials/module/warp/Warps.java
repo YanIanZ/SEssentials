@@ -6,6 +6,7 @@ import java.util.Locale;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.store.YamlStore;
 import org.bukkit.Location;
+import org.bukkit.Material;
 
 /**
  * Static persistence helpers for the warp module. Unlike homes, warps are global
@@ -41,6 +42,20 @@ final class Warps {
     /** @return whether a warp named {@code name} exists. */
     static boolean exists(SEssentialsPlugin plugin, String name) {
         return store(plugin).contains(path(name));
+    }
+
+    /**
+     * Resolves the menu icon for the warp named {@code name}. If an optional icon material
+     * is stored at {@code "warp-icons.<name>"} it is used; otherwise (unset or unrecognised)
+     * the default {@link Material#ENDER_PEARL} is returned. Read-only and additive — the
+     * location storage format is untouched.
+     *
+     * @return the stored icon material, or {@link Material#ENDER_PEARL} as a fallback
+     */
+    static Material icon(SEssentialsPlugin plugin, String name) {
+        String raw = store(plugin).getString("warp-icons." + name.toLowerCase(Locale.ROOT));
+        Material material = raw == null ? null : Material.matchMaterial(raw);
+        return material != null ? material : Material.ENDER_PEARL;
     }
 
     /** Saves {@code location} as the warp named {@code name} (creating or overwriting it) and persists the store. */
