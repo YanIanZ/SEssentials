@@ -28,7 +28,7 @@ import org.bukkit.entity.Player;
  * directly from the calling thread rather than hopping to the target's region
  * thread.</p>
  */
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "deprecation"})
 final class WhoisCommand {
 
     private static final DateTimeFormatter DATE_FORMAT =

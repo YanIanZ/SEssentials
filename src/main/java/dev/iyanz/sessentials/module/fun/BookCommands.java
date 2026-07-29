@@ -71,7 +71,15 @@ final class BookCommands {
         Msg.ok(player, "Copied the book's pages into a new writable book.");
     }
 
-    /** Builds a new {@code WRITABLE_BOOK} carrying {@code writtenBook}'s pages. */
+    /**
+     * Builds a new {@code WRITABLE_BOOK} carrying {@code writtenBook}'s pages.
+     *
+     * <p>{@link WritableBookMeta} only exposes the legacy {@code String}-based page
+     * API (no {@code Component} equivalent), so {@link BookMeta#getPages()} is used
+     * despite being deprecated in favor of {@code Component} pages — it is the only
+     * way to carry over the exact formatted page content.</p>
+     */
+    @SuppressWarnings("deprecation")
     private static ItemStack toWritable(ItemStack writtenBook) {
         BookMeta written = (BookMeta) writtenBook.getItemMeta();
         ItemStack writable = new ItemStack(Material.WRITABLE_BOOK);

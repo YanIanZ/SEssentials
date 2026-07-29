@@ -17,8 +17,13 @@ import org.bukkit.command.CommandSender;
  * Registers {@code /banlist}: lists every currently name-banned player with their
  * reason and expiry (or {@code "permanent"} if none), read from the server's
  * {@link BanList#getBanEntries() name ban list}.
+ *
+ * <p>Uses the classic {@code BanList.Type.NAME}-based API (also used by the
+ * moderation module's {@code /ban}/{@code /unban}), which Paper has since
+ * deprecated in favour of a generic {@code BanListType}-based one; the classic API
+ * still works and keeps this command consistent with the rest of the plugin.</p>
  */
-@SuppressWarnings({"UnstableApiUsage", "rawtypes"})
+@SuppressWarnings({"UnstableApiUsage", "deprecation", "rawtypes"})
 final class BanListCommand {
 
     private static final DateTimeFormatter EXPIRY_FORMAT =

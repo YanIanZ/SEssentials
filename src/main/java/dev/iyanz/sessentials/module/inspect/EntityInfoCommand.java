@@ -4,6 +4,8 @@ import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.command.Cmds;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -16,7 +18,7 @@ import org.bukkit.util.RayTraceResult;
  * sender's own line of sight, so it runs safely on their own region thread without
  * any scheduler hop.
  */
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "deprecation"})
 final class EntityInfoCommand {
 
     private static final int MAX_DISTANCE = 10;
@@ -51,8 +53,9 @@ final class EntityInfoCommand {
         Msg.value(player, "Entity:", InspectFormat.titleCase(target.getType().name()));
         Msg.value(player, "UUID:", target.getUniqueId().toString());
         Msg.value(player, "Location:", InspectFormat.location(target.getLocation()));
-        String customName = target.getCustomName();
-        Msg.value(player, "Custom name:", customName != null ? customName : "none");
+        Component customName = target.customName();
+        Msg.value(player, "Custom name:",
+                customName != null ? PlainTextComponentSerializer.plainText().serialize(customName) : "none");
         if (target instanceof LivingEntity living) {
             Msg.value(player, "Health:", InspectFormat.decimal(living.getHealth()) + " / " + InspectFormat.decimal(living.getMaxHealth()));
         }
