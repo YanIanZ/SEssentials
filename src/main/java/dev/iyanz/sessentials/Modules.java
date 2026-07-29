@@ -116,7 +116,10 @@ final class Modules {
                 new dev.iyanz.sessentials.module.vitals.VitalsModule(),
                 new dev.iyanz.sessentials.module.lockdown.LockdownModule(),
                 new dev.iyanz.sessentials.module.menus.MenusModule(),
-                new dev.iyanz.sessentials.module.damageindicator.DamageIndicatorModule()
+                new dev.iyanz.sessentials.module.damageindicator.DamageIndicatorModule(),
+                new dev.iyanz.sessentials.module.repairall.RepairAllModule(),
+                new dev.iyanz.sessentials.module.burn.BurnModule(),
+                new dev.iyanz.sessentials.module.fireball.FireballModule()
         );
     }
 }

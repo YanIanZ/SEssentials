@@ -16,9 +16,9 @@ import org.bukkit.entity.Player;
 
 /**
  * Admin commands, including data migration from other plugins:
- * {@code /sess import <cmi|essentials>} pulls homes (and, for Essentials, warps) into
- * SEssentials' data stores. Imports run off-thread and never overwrite an existing
- * home/warp of the same name.
+ * {@code /sess import <cmi|essentials>} pulls homes, warps, nicknames and balances into
+ * SEssentials' data stores (balances are deposited into the Vault economy, once per
+ * player). Imports run off-thread and never overwrite existing SEssentials data.
  */
 @SuppressWarnings("UnstableApiUsage")
 public final class AdminModule implements EssModule {
