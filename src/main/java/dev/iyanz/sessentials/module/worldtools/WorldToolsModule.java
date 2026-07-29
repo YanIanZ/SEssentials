@@ -1,5 +1,6 @@
 package dev.iyanz.sessentials.module.worldtools;
 
+import java.util.List;
 import java.util.Locale;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -7,25 +8,34 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.api.EssModule;
 import dev.iyanz.sessentials.command.Cmds;
+import dev.iyanz.sessentials.scheduler.Schedulers;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Registry;
+import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 
 /**
- * World inspection helpers: {@code /distance}, {@code /getpos}, {@code /findbiome} and
- * a trivial {@code /fixlight}. Biome/block reads run on the sender's region thread
- * (the command executor already is), and the biome scan is bounded to stay cheap.
+ * Small world-inspection utilities: {@code /distance}, {@code /getpos}
+ * ({@code /whereami}, {@code /coords}), {@code /findbiome} and {@code /fixlight}
+ * ({@code /relight}).
+ *
+ * <p>Folia-safe: reading another online player's location ({@code /distance}) hops
+ * onto that player's own region thread via {@link Schedulers#entity} before touching
+ * it, the same pattern {@code module.teleport.Teleports} uses to read a teleport
+ * anchor's location. {@code /findbiome} samples distant world columns via Paper's
+ * region scheduler; see {@link BiomeFinder} for that Folia-safety writeup.
+ * {@code /getpos} and {@code /fixlight} only ever touch the sender's own position,
+ * which is already safe from a normal command executor (it runs on the sender's own
+ * region thread).</p>
  */
 @SuppressWarnings("UnstableApiUsage")
 public final class WorldToolsModule implements EssModule {
 
-    private static final int SCAN_RADIUS = 1500;
-    private static final int SCAN_STEP = 64;
+    private SEssentialsPlugin plugin;
 
     @Override
     public String name() {
@@ -34,105 +44,108 @@ public final class WorldToolsModule implements EssModule {
 
     @Override
     public void enable(SEssentialsPlugin plugin) {
+        this.plugin = plugin;
         plugin.commands(reg -> {
             reg.register(Commands.literal("distance")
                     .requires(s -> s.getSender().hasPermission("sessentials.distance"))
                     .then(Commands.argument("player", StringArgumentType.word()).suggests(Cmds.PLAYERS)
                             .executes(this::distance))
-                    .build(), "Distance to another player");
+                    .build(), "Report the distance to another online player");
 
             reg.register(Commands.literal("getpos")
                     .requires(s -> s.getSender().hasPermission("sessentials.getpos"))
                     .executes(Cmds.playerExec(this::getpos))
-                    .build(), "Show your coordinates", java.util.List.of("whereami", "coords"));
+                    .build(), "Show your exact coordinates, world and facing", List.of("whereami", "coords"));
 
             reg.register(Commands.literal("findbiome")
                     .requires(s -> s.getSender().hasPermission("sessentials.findbiome"))
-                    .then(Commands.argument("biome", StringArgumentType.word()).suggests(this::biomeSuggestions)
-                            .executes(this::findbiome))
-                    .build(), "Find the nearest biome");
+                    .then(Commands.argument("biome", StringArgumentType.word()).suggests(BiomeNames.SUGGESTIONS)
+                            .executes(this::findBiome))
+                    .build(), "Find the nearest block of a given biome");
 
             reg.register(Commands.literal("fixlight")
                     .requires(s -> s.getSender().hasPermission("sessentials.fixlight"))
-                    .executes(Cmds.playerExec(p ->
-                            Msg.info(p, "Paper relights chunks automatically — nothing to fix.")))
-                    .build(), "Lighting info", java.util.List.of("relight"));
+                    .executes(Cmds.playerExec(this::fixLight))
+                    .build(), "Resend your current chunk to nudge stray lighting", List.of("relight"));
         });
     }
+
+    // --- distance ----------------------------------------------------------------
 
     private int distance(CommandContext<CommandSourceStack> ctx) {
         Player sender = Cmds.player(ctx);
         if (sender == null) {
             return 0;
         }
-        Player target = Bukkit.getPlayerExact(StringArgumentType.getString(ctx, "player"));
+        String name = StringArgumentType.getString(ctx, "player");
+        Player target = Bukkit.getPlayerExact(name);
         if (target == null) {
-            Msg.err(sender, "That player is not online.");
+            Msg.err(sender, name + " is not online.");
             return 0;
         }
-        if (!target.getWorld().equals(sender.getWorld())) {
-            Msg.err(sender, target.getName() + " is in another world.");
-            return 0;
+        if (target.equals(sender)) {
+            Msg.value(sender, "Distance to " + target.getName() + ":", "0 blocks");
+            return 1;
         }
-        double d = sender.getLocation().distance(target.getLocation());
-        Msg.value(sender, "Distance to " + target.getName() + ":", String.format("%.1f blocks", d));
+
+        // A normal command executor already runs on the sender's own region thread,
+        // so capturing their location here is safe; reading the target's location is
+        // only safe from the target's own region thread, so we hop there for that.
+        Location senderLocation = sender.getLocation().clone();
+        World senderWorld = sender.getWorld();
+
+        Schedulers.entity(plugin, target, () -> {
+            World targetWorld = target.getWorld();
+            if (!targetWorld.equals(senderWorld)) {
+                Schedulers.entity(plugin, sender, () -> Msg.err(sender,
+                        target.getName() + " is in a different world (" + targetWorld.getName() + ")."));
+                return;
+            }
+            double blocks = senderLocation.distance(target.getLocation());
+            String formatted = String.format(Locale.ROOT, "%.1f blocks", blocks);
+            Schedulers.entity(plugin, sender, () ->
+                    Msg.value(sender, "Distance to " + target.getName() + ":", formatted));
+        });
         return 1;
     }
 
-    private void getpos(Player p) {
-        Location l = p.getLocation();
-        Msg.value(p, "Position:", String.format("%.1f, %.1f, %.1f", l.getX(), l.getY(), l.getZ()));
-        Msg.value(p, "World:", l.getWorld().getName() + "  " + facing(l.getYaw()));
+    // --- getpos --------------------------------------------------------------------
+
+    private void getpos(Player player) {
+        Location loc = player.getLocation();
+        Msg.value(player, "Position:",
+                String.format(Locale.ROOT, "%.2f, %.2f, %.2f", loc.getX(), loc.getY(), loc.getZ()));
+        Msg.value(player, "World:", player.getWorld().getName());
+        Msg.value(player, "Facing:", Facing.cardinal(loc.getYaw())
+                + String.format(Locale.ROOT, " (yaw %.1f, pitch %.1f)", loc.getYaw(), loc.getPitch()));
     }
 
-    private int findbiome(CommandContext<CommandSourceStack> ctx) {
-        Player p = Cmds.player(ctx);
-        if (p == null) {
+    // --- findbiome -------------------------------------------------------------------
+
+    private int findBiome(CommandContext<CommandSourceStack> ctx) {
+        Player player = Cmds.player(ctx);
+        if (player == null) {
             return 0;
         }
-        String wanted = StringArgumentType.getString(ctx, "biome").toLowerCase(Locale.ROOT);
-        Location origin = p.getLocation();
-        int oy = origin.getBlockY();
-        Location best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (int dx = -SCAN_RADIUS; dx <= SCAN_RADIUS; dx += SCAN_STEP) {
-            for (int dz = -SCAN_RADIUS; dz <= SCAN_RADIUS; dz += SCAN_STEP) {
-                int x = origin.getBlockX() + dx;
-                int z = origin.getBlockZ() + dz;
-                Biome biome = origin.getWorld().getBiome(x, oy, z);
-                if (biome.getKey().getKey().equals(wanted)) {
-                    double dist = (double) dx * dx + (double) dz * dz;
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        best = new Location(origin.getWorld(), x, oy, z);
-                    }
-                }
-            }
-        }
-        if (best == null) {
-            Msg.err(p, "No '" + wanted + "' biome found within " + SCAN_RADIUS + " blocks.");
+        String raw = StringArgumentType.getString(ctx, "biome");
+        Biome biome = BiomeNames.resolve(raw);
+        if (biome == null) {
+            Msg.err(player, "Unknown biome: " + raw + ". Tab-complete to see valid names.");
             return 0;
         }
-        Msg.value(p, "Nearest " + wanted + ":", String.format("%d, %d, %d (%.0fm)",
-                best.getBlockX(), best.getBlockY(), best.getBlockZ(), Math.sqrt(bestDist)));
+        BiomeFinder.search(plugin, player, biome);
         return 1;
     }
 
-    private java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> biomeSuggestions(
-            CommandContext<CommandSourceStack> ctx, com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
-        String remaining = builder.getRemainingLowerCase();
-        for (Biome biome : Registry.BIOME) {
-            String key = biome.getKey().getKey();
-            if (key.startsWith(remaining)) {
-                builder.suggest(key);
-            }
-        }
-        return builder.buildFuture();
-    }
+    // --- fixlight --------------------------------------------------------------------
 
-    private static String facing(float yaw) {
-        String[] dirs = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
-        int i = Math.round(yaw / 45f) & 7;
-        return "facing " + dirs[i];
+    private void fixLight(Player player) {
+        Location loc = player.getLocation();
+        boolean resent = player.getWorld().refreshChunk(loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
+        if (resent) {
+            Msg.ok(player, "Resent your current chunk. Paper relights chunks automatically as they change.");
+        } else {
+            Msg.info(player, "Nothing to resend here. Paper relights chunks automatically as they change.");
+        }
     }
 }

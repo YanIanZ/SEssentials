@@ -59,7 +59,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.notify.NotifyModule(),
                 new dev.iyanz.sessentials.module.worldtools.WorldToolsModule(),
                 new dev.iyanz.sessentials.module.invtools.InvToolsModule(),
-                new dev.iyanz.sessentials.module.hpbar.HpBarModule()
+                new dev.iyanz.sessentials.module.hpbar.HpBarModule(),
+                new dev.iyanz.sessentials.module.painting.PaintingModule(),
+                new dev.iyanz.sessentials.module.armorstand.ArmorStandModule(),
+                new dev.iyanz.sessentials.module.disableenchant.DisableEnchantModule(),
+                new dev.iyanz.sessentials.module.colorlimits.ColorLimitsModule(),
+                new dev.iyanz.sessentials.module.timedcommands.TimedCommandsModule()
         );
     }
 }
