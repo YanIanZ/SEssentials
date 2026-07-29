@@ -46,7 +46,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.deathmessages.DeathMessagesModule(),
                 new dev.iyanz.sessentials.module.autobroadcast.AutoBroadcastModule(),
                 new dev.iyanz.sessentials.module.customalias.CustomAliasModule(),
-                new dev.iyanz.sessentials.module.cmdcontrol.CmdControlModule()
+                new dev.iyanz.sessentials.module.cmdcontrol.CmdControlModule(),
+                new dev.iyanz.sessentials.module.holograms.HologramsModule(),
+                new dev.iyanz.sessentials.module.portals.PortalsModule(),
+                new dev.iyanz.sessentials.module.signs.SignsModule(),
+                new dev.iyanz.sessentials.module.recipes.RecipesModule(),
+                new dev.iyanz.sessentials.module.playtimerewards.PlaytimeRewardsModule()
         );
     }
 }
