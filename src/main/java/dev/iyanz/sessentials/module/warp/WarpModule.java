@@ -90,7 +90,12 @@ public final class WarpModule implements EssModule {
                     Commands.literal("warps")
                             .requires(s -> s.getSender().hasPermission("sessentials.warps"))
                             .executes(ctx -> {
-                                listWarps(plugin, ctx.getSource().getSender());
+                                CommandSender sender = ctx.getSource().getSender();
+                                if (sender instanceof Player player) {
+                                    WarpsMenu.open(plugin, player);
+                                } else {
+                                    listWarps(plugin, sender);
+                                }
                                 return 1;
                             })
                             .build(),

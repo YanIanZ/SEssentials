@@ -54,6 +54,7 @@ public final class ModerationModule implements EssModule, Listener {
         this.plugin = plugin;
         this.store = plugin.stores().get("moderation");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        plugin.getServer().getPluginManager().registerEvents(new InvseeListener(), plugin);
 
         plugin.commands(reg -> {
             reg.register(Commands.literal("kick")
@@ -116,8 +117,8 @@ public final class ModerationModule implements EssModule, Listener {
             reg.register(Commands.literal("invsee")
                     .requires(s -> s.getSender().hasPermission("sessentials.invsee"))
                     .then(Commands.argument("player", StringArgumentType.word()).suggests(Cmds.PLAYERS)
-                            .executes(ctx -> openInv(ctx, false)))
-                    .build(), "View a player's inventory");
+                            .executes(this::invsee))
+                    .build(), "View + edit a player's inventory");
 
             reg.register(Commands.literal("endersee")
                     .requires(s -> s.getSender().hasPermission("sessentials.endersee"))
@@ -237,6 +238,19 @@ public final class ModerationModule implements EssModule, Listener {
             }
             Msg.ok(p, "You are now vanished.");
         }
+    }
+
+    private int invsee(CommandContext<CommandSourceStack> ctx) {
+        Player viewer = Cmds.player(ctx);
+        if (viewer == null) {
+            return 0;
+        }
+        Player t = online(ctx);
+        if (t == null) {
+            return 0;
+        }
+        InvseeMenu.open(plugin, viewer, t);
+        return 1;
     }
 
     private int openInv(CommandContext<CommandSourceStack> ctx, boolean ender) {

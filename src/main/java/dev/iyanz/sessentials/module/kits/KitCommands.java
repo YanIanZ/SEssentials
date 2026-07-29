@@ -43,7 +43,7 @@ final class KitCommands {
         String remaining = builder.getRemainingLowerCase();
         CommandSender sender = ctx.getSource().getSender();
         for (String name : service.names()) {
-            if (name.toLowerCase(Locale.ROOT).startsWith(remaining) && sender.hasPermission(kitPermission(name))) {
+            if (name.toLowerCase(Locale.ROOT).startsWith(remaining) && sender.hasPermission(KitService.permission(name))) {
                 builder.suggest(name);
             }
         }
@@ -91,7 +91,12 @@ final class KitCommands {
 
             reg.register(Commands.literal("kits")
                     .executes(ctx -> {
-                        listKits(ctx.getSource().getSender());
+                        CommandSender sender = ctx.getSource().getSender();
+                        if (sender instanceof Player player) {
+                            KitsMenu.open(plugin, service, player);
+                        } else {
+                            listKits(sender);
+                        }
                         return 1;
                     })
                     .build(), "List available kits and their cooldown status.", List.of("kitlist"));
@@ -104,7 +109,7 @@ final class KitCommands {
             return 0;
         }
         String name = StringArgumentType.getString(ctx, "name").toLowerCase(Locale.ROOT);
-        if (!player.hasPermission(kitPermission(name))) {
+        if (!player.hasPermission(KitService.permission(name))) {
             Msg.err(player, "You don't have access to kit " + name + ".");
             return 0;
         }
@@ -116,11 +121,11 @@ final class KitCommands {
         Kit kit = kitOpt.get();
         long remaining = service.remainingSeconds(player.getUniqueId(), name);
         if (remaining > 0) {
-            Msg.err(player, "Kit " + name + " is on cooldown for " + formatDuration(remaining) + ".");
+            Msg.err(player, "Kit " + name + " is on cooldown for " + KitService.formatDuration(remaining) + ".");
             return 0;
         }
         service.startCooldown(player.getUniqueId(), name, kit.cooldownSeconds());
-        giveItems(player, kit.items());
+        service.grant(player, kit.items());
         Msg.ok(player, "You received kit " + name + ".");
         return 1;
     }
@@ -164,14 +169,14 @@ final class KitCommands {
         }
         boolean any = false;
         for (String name : names) {
-            if (!sender.hasPermission(kitPermission(name))) {
+            if (!sender.hasPermission(KitService.permission(name))) {
                 continue;
             }
             any = true;
             String status;
             if (sender instanceof Player player) {
                 long remaining = service.remainingSeconds(player.getUniqueId(), name);
-                status = remaining > 0 ? formatDuration(remaining) : "Ready";
+                status = remaining > 0 ? KitService.formatDuration(remaining) : "Ready";
             } else {
                 status = "Ready";
             }
@@ -180,37 +185,5 @@ final class KitCommands {
         if (!any) {
             Msg.info(sender, "There are no kits available to you.");
         }
-    }
-
-    /** Grants (defensive copies of) {@code items} to {@code player}, dropping overflow on the ground. */
-    private void giveItems(Player player, List<ItemStack> items) {
-        ItemStack[] copies = new ItemStack[items.size()];
-        for (int i = 0; i < items.size(); i++) {
-            copies[i] = items.get(i).clone();
-        }
-        var overflow = player.getInventory().addItem(copies);
-        for (ItemStack leftover : overflow.values()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
-        }
-    }
-
-    private static String kitPermission(String name) {
-        return "sessentials.kit." + name;
-    }
-
-    /** Formats whole seconds as a compact {@code "1h 5m 12s"}-style duration. */
-    private static String formatDuration(long totalSeconds) {
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-        StringBuilder out = new StringBuilder();
-        if (hours > 0) {
-            out.append(hours).append("h ");
-        }
-        if (hours > 0 || minutes > 0) {
-            out.append(minutes).append("m ");
-        }
-        out.append(seconds).append("s");
-        return out.toString();
     }
 }

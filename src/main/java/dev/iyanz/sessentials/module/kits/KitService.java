@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import dev.iyanz.sessentials.store.YamlStore;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -144,5 +145,46 @@ public final class KitService {
         long nextAvailable = System.currentTimeMillis() + (cooldownSeconds * 1000L);
         cooldowns.set(player + "." + name, nextAvailable);
         cooldowns.save();
+    }
+
+    /**
+     * Grants (defensive copies of) {@code items} to {@code player}'s inventory,
+     * dropping any overflow naturally at their feet. Shared by both the
+     * {@code /kit} command and the kits GUI so item-granting lives in one place.
+     *
+     * @param player the recipient
+     * @param items  the items to grant; each is cloned, so the caller's list (the
+     *               kit's cached definition) is left untouched
+     */
+    public void grant(Player player, List<ItemStack> items) {
+        ItemStack[] copies = new ItemStack[items.size()];
+        for (int i = 0; i < items.size(); i++) {
+            copies[i] = items.get(i).clone();
+        }
+        var overflow = player.getInventory().addItem(copies);
+        for (ItemStack leftover : overflow.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
+    }
+
+    /** @return the dynamic per-kit permission node, {@code "sessentials.kit.<name>"}. */
+    public static String permission(String name) {
+        return "sessentials.kit." + name;
+    }
+
+    /** Formats whole seconds as a compact {@code "1h 5m 12s"}-style duration. */
+    public static String formatDuration(long totalSeconds) {
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        StringBuilder out = new StringBuilder();
+        if (hours > 0) {
+            out.append(hours).append("h ");
+        }
+        if (hours > 0 || minutes > 0) {
+            out.append(minutes).append("m ");
+        }
+        out.append(seconds).append("s");
+        return out.toString();
     }
 }

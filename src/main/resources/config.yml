@@ -4,3 +4,24 @@
 
 # Chat prefix for plugin messages (MiniMessage / legacy '&' both accepted).
 prefix: "<gradient:#43C6AC:#4FC3F7><bold>SEssentials</bold></gradient> <dark_gray>» "
+
+# Homes
+home:
+  # Default max homes; override per-rank with the permission sessentials.homes.<n>.
+  default-max: 3
+
+# Kits
+kits:
+  # Default per-kit cooldown in seconds when a kit doesn't set its own.
+  default-cooldown: 3600
+
+# Info commands (/rules, /motd). Lines are MiniMessage.
+info:
+  rules:
+    - "<gradient:#43C6AC:#4FC3F7><bold>ꜱᴏᴜʀʙʏᴄʀᴀꜰᴛ ʀᴜʟᴇꜱ</bold></gradient>"
+    - "<gray>1. ʙᴇ ʀᴇꜱᴘᴇᴄᴛꜰᴜʟ ᴛᴏ ᴏᴛʜᴇʀ ᴘʟᴀʏᴇʀꜱ."
+    - "<gray>2. ɴᴏ ᴄʜᴇᴀᴛɪɴɢ, ᴇxᴘʟᴏɪᴛɪɴɢ ᴏʀ ɢʀɪᴇꜰɪɴɢ."
+    - "<gray>3. ʜᴀᴠᴇ ꜰᴜɴ!"
+  motd:
+    - "<gradient:#43C6AC:#4FC3F7><bold>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ꜱᴏᴜʀʙʏᴄʀᴀꜰᴛ</bold></gradient>"
+    - "<gray>ᴛʏᴘᴇ <#FFD54F>/ʀᴜʟᴇꜱ <gray>ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ."

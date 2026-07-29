@@ -87,7 +87,7 @@ public final class HomeModule implements EssModule {
             reg.register(
                     Commands.literal("homes")
                             .requires(s -> s.getSender().hasPermission("sessentials.homes"))
-                            .executes(Cmds.playerExec(p -> listHomes(plugin, p)))
+                            .executes(Cmds.playerExec(p -> HomesMenu.open(plugin, p)))
                             .build(),
                     "List your homes",
                     List.of("homelist"));
@@ -141,15 +141,5 @@ public final class HomeModule implements EssModule {
         }
         Homes.delete(plugin, player.getUniqueId(), lower);
         Msg.ok(player, "Home \"" + lower + "\" deleted.");
-    }
-
-    /** Lists {@code player}'s home names. */
-    private static void listHomes(SEssentialsPlugin plugin, Player player) {
-        List<String> names = Homes.names(plugin, player.getUniqueId());
-        if (names.isEmpty()) {
-            Msg.info(player, "You have no homes set.");
-            return;
-        }
-        Msg.value(player, "Your homes:", String.join(", ", names));
     }
 }

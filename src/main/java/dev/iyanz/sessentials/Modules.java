@@ -26,7 +26,14 @@ final class Modules {
                 new dev.iyanz.sessentials.module.economy.EconomyModule(),
                 new dev.iyanz.sessentials.module.kits.KitsModule(),
                 new dev.iyanz.sessentials.module.identity.IdentityModule(),
-                new dev.iyanz.sessentials.module.utility.UtilityModule()
+                new dev.iyanz.sessentials.module.utility.UtilityModule(),
+                new dev.iyanz.sessentials.module.admin.AdminModule(),
+                new dev.iyanz.sessentials.module.jail.JailModule(),
+                new dev.iyanz.sessentials.module.mail.MailModule(),
+                new dev.iyanz.sessentials.module.ignore.IgnoreModule(),
+                new dev.iyanz.sessentials.module.playtime.PlaytimeModule(),
+                new dev.iyanz.sessentials.module.info.InfoModule(),
+                new dev.iyanz.sessentials.module.worlds.WorldsModule()
         );
     }
 }
