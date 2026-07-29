@@ -97,20 +97,28 @@ final class GroundCleaner {
 
     /** Removes every dropped item in {@code world} and broadcasts the count. */
     private static void sweepAndAnnounce(SEssentialsPlugin plugin, World world) {
-        int removed = removeDroppedItems(world);
+        int removed = removeDroppedItems(plugin, world);
         broadcast(plugin, cleared(world, removed));
     }
 
-    /** Removes every dropped {@link Item} entity in {@code world}. */
-    private static int removeDroppedItems(World world) {
-        int removed = 0;
+    /**
+     * Removes every dropped {@link Item} entity in {@code world} and returns how many were
+     * scheduled for removal. Runs on the global region thread (safe to scan the entity
+     * list there), but each {@code item.remove()} is hopped to that item's OWN region
+     * thread — on Folia a bare {@code item.remove()} off the owning region throws
+     * "IllegalStateException off the global region".
+     */
+    private static int removeDroppedItems(SEssentialsPlugin plugin, World world) {
+        java.util.List<Item> items = new java.util.ArrayList<>();
         for (Entity entity : world.getEntities()) {
             if (entity instanceof Item item) {
-                item.remove();
-                removed++;
+                items.add(item);
             }
         }
-        return removed;
+        for (Item item : items) {
+            item.getScheduler().run(plugin, t -> item.remove(), null);
+        }
+        return items.size();
     }
 
     /** Sends {@code message} to the console and to every online player, each on its own region thread. */

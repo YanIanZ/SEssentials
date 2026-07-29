@@ -89,21 +89,27 @@ final class EntityOps {
      */
     static void kill(SEssentialsPlugin plugin, CommandSender sender, EntityType type, World world) {
         Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
-            int removed = 0;
+            // Scanning the entity list + reading getType() is a safe read on the global
+            // thread, but entity.remove() must run on the entity's OWN region thread on
+            // Folia (else "IllegalStateException off the global region"). Collect the
+            // matches, then hop each removal to its owner (as HologramRenderer/Butcher do).
+            java.util.List<Entity> targets = new java.util.ArrayList<>();
             for (Entity entity : world.getEntities()) {
                 if (entity.getType() == type && !(entity instanceof Player)) {
-                    entity.remove();
-                    removed++;
+                    targets.add(entity);
                 }
             }
-            int finalRemoved = removed;
+            for (Entity target : targets) {
+                target.getScheduler().run(plugin, t -> target.remove(), null);
+            }
+            int found = targets.size();
             String typeName = type.name().toLowerCase(Locale.ROOT);
 
             dispatch(plugin, sender, () -> {
-                if (finalRemoved == 0) {
+                if (found == 0) {
                     Msg.info(sender, "No " + typeName + " entities were found in " + world.getName() + ".");
                 } else {
-                    Msg.ok(sender, "Removed " + finalRemoved + " " + typeName + " from " + world.getName() + ".");
+                    Msg.ok(sender, "Removed " + found + " " + typeName + " from " + world.getName() + ".");
                 }
             });
         });

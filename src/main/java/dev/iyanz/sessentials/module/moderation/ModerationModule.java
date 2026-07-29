@@ -69,6 +69,7 @@ public final class ModerationModule implements EssModule, Listener {
         hydrateMutes();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getServer().getPluginManager().registerEvents(new InvseeListener(), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new EnderseeListener(), plugin);
 
         plugin.commands(reg -> {
             reg.register(Commands.literal("kick")
@@ -137,8 +138,8 @@ public final class ModerationModule implements EssModule, Listener {
             reg.register(Commands.literal("endersee")
                     .requires(s -> s.getSender().hasPermission("sessentials.endersee"))
                     .then(Commands.argument("player", StringArgumentType.word()).suggests(Cmds.PLAYERS)
-                            .executes(ctx -> openInv(ctx, true)))
-                    .build(), "View a player's ender chest");
+                            .executes(this::endersee))
+                    .build(), "View + edit a player's ender chest");
         });
     }
 
@@ -273,7 +274,7 @@ public final class ModerationModule implements EssModule, Listener {
         return 1;
     }
 
-    private int openInv(CommandContext<CommandSourceStack> ctx, boolean ender) {
+    private int endersee(CommandContext<CommandSourceStack> ctx) {
         Player viewer = Cmds.player(ctx);
         if (viewer == null) {
             return 0;
@@ -282,8 +283,10 @@ public final class ModerationModule implements EssModule, Listener {
         if (t == null) {
             return 0;
         }
-        Schedulers.entity(plugin, viewer, () ->
-                viewer.openInventory(ender ? t.getEnderChest() : t.getInventory()));
+        // Never open the target's LIVE ender chest on the viewer's region thread (Folia
+        // cross-region access / item-dupe race). EnderseeMenu snapshots on the target's
+        // region thread and writes edits back there on close, exactly like InvseeMenu.
+        EnderseeMenu.open(plugin, viewer, t);
         return 1;
     }
 

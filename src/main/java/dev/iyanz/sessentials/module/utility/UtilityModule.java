@@ -19,8 +19,8 @@ import org.bukkit.entity.Player;
 
 /**
  * Miscellaneous utility commands: {@code near}, {@code list}, {@code sudo},
- * {@code spawnmob}, {@code lightning}, {@code tps} and {@code gc}. (No {@code ping} —
- * deliberately excluded.)
+ * {@code spawnmob}, {@code lightning} and {@code gc}. ({@code ping} and {@code tps}
+ * are deliberately excluded.)
  */
 @SuppressWarnings("UnstableApiUsage")
 public final class UtilityModule implements EssModule {
@@ -193,17 +193,5 @@ public final class UtilityModule implements EssModule {
 
     private void strike(Player target) {
         Schedulers.entity(plugin, target, () -> target.getWorld().strikeLightning(target.getLocation()));
-    }
-
-    private void showTps(org.bukkit.command.CommandSender to) {
-        double[] tps = Bukkit.getServer().getTPS();
-        Msg.raw(to, Msg.prefix() + "<#9AA0A6>" + dev.iyanz.sessentials.util.SmallCaps.of("TPS: ")
-                + tpsColor(tps[0]) + " <#9AA0A6>| " + tpsColor(tps[1]) + " <#9AA0A6>| " + tpsColor(tps[2]));
-    }
-
-    private String tpsColor(double tps) {
-        double v = Math.min(20.0, tps);
-        String color = v >= 18 ? "<#8BE28B>" : v >= 15 ? "<#FFD54F>" : "<#FF7B7B>";
-        return color + String.format("%.1f", v);
     }
 }

@@ -156,6 +156,11 @@ combat:
 hpbar:
   enabled: true
 
+# Floating damage numbers (damage-indicator module) — a short-lived holographic
+# number pops above an entity when it takes damage.
+damage-indicator:
+  enabled: true
+
 # ----------------------------------------------------------------------------
 #  Economy features
 # ----------------------------------------------------------------------------
