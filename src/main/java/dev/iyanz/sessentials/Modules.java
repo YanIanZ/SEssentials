@@ -64,7 +64,15 @@ final class Modules {
                 new dev.iyanz.sessentials.module.armorstand.ArmorStandModule(),
                 new dev.iyanz.sessentials.module.disableenchant.DisableEnchantModule(),
                 new dev.iyanz.sessentials.module.colorlimits.ColorLimitsModule(),
-                new dev.iyanz.sessentials.module.timedcommands.TimedCommandsModule()
+                new dev.iyanz.sessentials.module.timedcommands.TimedCommandsModule(),
+                new dev.iyanz.sessentials.module.savedinv.SavedInvModule(),
+                new dev.iyanz.sessentials.module.nbt.NbtModule(),
+                new dev.iyanz.sessentials.module.stats.StatsModule(),
+                new dev.iyanz.sessentials.module.attachedcommands.AttachedCommandsModule(),
+                new dev.iyanz.sessentials.module.ctellraw.CTellrawModule(),
+                new dev.iyanz.sessentials.module.armoreffects.ArmorEffectsModule(),
+                new dev.iyanz.sessentials.module.elytra.ElytraModule(),
+                new dev.iyanz.sessentials.module.ipinfo.IpInfoModule()
         );
     }
 }

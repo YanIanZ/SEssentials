@@ -1,6 +1,7 @@
 package dev.iyanz.sessentials.module.painting;
 
 import java.util.List;
+import java.util.Locale;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.api.EssModule;
@@ -23,8 +24,14 @@ import org.bukkit.util.RayTraceResult;
  * normal command executor already runs there), but the painting itself is only ever
  * mutated on its own region thread via {@link Schedulers#entity}, since it may be owned
  * by a different Folia region than the sender.</p>
+ *
+ * <p>{@link Art#values()} and the {@link org.bukkit.util.OldEnum} accessors it returns
+ * ({@code name()}, {@code ordinal()}) are Paper's legacy enum-style accessors, marked
+ * deprecated for removal in favor of the {@code Registry}-based art API; this is still
+ * the simplest way to cycle through every art, so the deprecation is suppressed
+ * deliberately (matching {@code BiomeNames} elsewhere in this project).</p>
  */
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "removal"})
 public final class PaintingModule implements EssModule {
 
     private static final String PERMISSION = "sessentials.painting";
@@ -63,8 +70,8 @@ public final class PaintingModule implements EssModule {
         }
         Schedulers.entity(plugin, painting, () -> {
             Art[] arts = Art.values();
-            int currentIndex = indexOf(arts, painting.getArt());
-            Art next = arts[(currentIndex + 1) % arts.length];
+            Art current = painting.getArt();
+            Art next = arts[(current.ordinal() + 1) % arts.length];
             if (painting.setArt(next, true)) {
                 Msg.ok(player, "Painting set to " + displayName(next) + ".");
             } else {
@@ -73,19 +80,9 @@ public final class PaintingModule implements EssModule {
         });
     }
 
-    /** @return the index of {@code value} in {@code arts}, or {@code -1} if not found. */
-    private static int indexOf(Art[] arts, Art value) {
-        for (int i = 0; i < arts.length; i++) {
-            if (arts[i].equals(value)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /** @return {@code art}'s registry key in title case, e.g. {@code "Skull And Roses"}. */
+    /** @return {@code art}'s constant name in title case, e.g. {@code "Skull And Roses"}. */
     private static String displayName(Art art) {
-        String[] parts = art.key().value().split("_");
+        String[] parts = art.name().toLowerCase(Locale.ROOT).split("_");
         StringBuilder out = new StringBuilder();
         for (String part : parts) {
             if (part.isEmpty()) {
