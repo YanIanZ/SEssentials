@@ -81,7 +81,8 @@ final class Modules {
                 new dev.iyanz.sessentials.module.ctext.CTextModule(),
                 new dev.iyanz.sessentials.module.commandspy.CommandSpyModule(),
                 new dev.iyanz.sessentials.module.afkkick.AfkKickModule(),
-                new dev.iyanz.sessentials.module.firstjoin.FirstJoinModule()
+                new dev.iyanz.sessentials.module.firstjoin.FirstJoinModule(),
+                new dev.iyanz.sessentials.module.emoji.EmojiModule()
         );
     }
 }
