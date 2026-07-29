@@ -45,7 +45,7 @@ final class GraveDeathListener implements Listener {
     }
 
     /** Moves the dying player's drops into a retrievable grave when eligible. */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (!settings.enabled() || event.getKeepInventory()) {
             return;

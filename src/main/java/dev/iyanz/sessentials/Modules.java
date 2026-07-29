@@ -102,7 +102,9 @@ final class Modules {
                 new dev.iyanz.sessentials.module.lottery.LotteryModule(),
                 new dev.iyanz.sessentials.module.chestlock.ChestLockModule(),
                 new dev.iyanz.sessentials.module.itemframe.ItemFrameModule(),
-                new dev.iyanz.sessentials.module.grave.GraveModule()
+                new dev.iyanz.sessentials.module.grave.GraveModule(),
+                new dev.iyanz.sessentials.module.mutechat.MuteChatModule(),
+                new dev.iyanz.sessentials.module.slowmode.SlowModeModule()
         );
     }
 }
