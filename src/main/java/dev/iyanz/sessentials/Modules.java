@@ -51,7 +51,15 @@ final class Modules {
                 new dev.iyanz.sessentials.module.portals.PortalsModule(),
                 new dev.iyanz.sessentials.module.signs.SignsModule(),
                 new dev.iyanz.sessentials.module.recipes.RecipesModule(),
-                new dev.iyanz.sessentials.module.playtimerewards.PlaytimeRewardsModule()
+                new dev.iyanz.sessentials.module.playtimerewards.PlaytimeRewardsModule(),
+                new dev.iyanz.sessentials.module.placeholders.PlaceholdersModule(),
+                new dev.iyanz.sessentials.module.chatformat.ChatFormatModule(),
+                new dev.iyanz.sessentials.module.chatfilter.ChatFilterModule(),
+                new dev.iyanz.sessentials.module.playeroptions.PlayerOptionsModule(),
+                new dev.iyanz.sessentials.module.notify.NotifyModule(),
+                new dev.iyanz.sessentials.module.worldtools.WorldToolsModule(),
+                new dev.iyanz.sessentials.module.invtools.InvToolsModule(),
+                new dev.iyanz.sessentials.module.hpbar.HpBarModule()
         );
     }
 }
