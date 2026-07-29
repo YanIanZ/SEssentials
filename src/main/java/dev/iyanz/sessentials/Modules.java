@@ -42,7 +42,11 @@ final class Modules {
                 new dev.iyanz.sessentials.module.econextra.EconExtraModule(),
                 new dev.iyanz.sessentials.module.utility2.Utility2Module(),
                 new dev.iyanz.sessentials.module.scavenger.ScavengerModule(),
-                new dev.iyanz.sessentials.module.exp.ExpModule()
+                new dev.iyanz.sessentials.module.exp.ExpModule(),
+                new dev.iyanz.sessentials.module.deathmessages.DeathMessagesModule(),
+                new dev.iyanz.sessentials.module.autobroadcast.AutoBroadcastModule(),
+                new dev.iyanz.sessentials.module.customalias.CustomAliasModule(),
+                new dev.iyanz.sessentials.module.cmdcontrol.CmdControlModule()
         );
     }
 }
