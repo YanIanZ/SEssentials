@@ -5,8 +5,8 @@ import dev.iyanz.sessentials.api.EssModule;
 
 /**
  * Operator raw-MiniMessage messaging module: {@code /ctellraw} to send a rich
- * message to a single online player, and {@code /ctextall} (alias
- * {@code /ctellrawall}) to broadcast one to every online player and the console.
+ * message to a single online player, and {@code /ctellrawall} to broadcast one to
+ * every online player and the console.
  *
  * <p>Both commands are gated behind the {@code sessentials.ctellraw} permission and
  * parse their message argument as MiniMessage verbatim (gradients, click/hover

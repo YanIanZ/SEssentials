@@ -34,7 +34,7 @@ final class CTellrawCommands {
     private CTellrawCommands() {
     }
 
-    /** Registers {@code /ctellraw} and {@code /ctextall} (alias {@code /ctellrawall}). */
+    /** Registers {@code /ctellraw} and {@code /ctellrawall} (broadcast form). */
     static void register(SEssentialsPlugin plugin) {
         plugin.commands(reg -> {
             reg.register(Commands.literal("ctellraw")
@@ -45,11 +45,11 @@ final class CTellrawCommands {
                                     .executes(ctx -> handleTellraw(plugin, ctx))))
                     .build(), "Send a raw MiniMessage message to a player", List.of());
 
-            reg.register(Commands.literal("ctextall")
+            reg.register(Commands.literal("ctellrawall")
                     .requires(s -> s.getSender().hasPermission(PERMISSION))
                     .then(Commands.argument("message", StringArgumentType.greedyString())
                             .executes(ctx -> handleTellrawAll(plugin, ctx)))
-                    .build(), "Broadcast a raw MiniMessage message to everyone", List.of("ctellrawall"));
+                    .build(), "Broadcast a raw MiniMessage message to everyone", List.of());
         });
     }
 
