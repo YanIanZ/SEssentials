@@ -39,4 +39,14 @@ final class SilentChestService {
         silentPlayers.remove(playerId);
         return false;
     }
+
+    /**
+     * Clears silent-chest mode for the given player, if set. Called on quit so a
+     * disconnected player's id does not leak from the in-memory set.
+     *
+     * @param playerId the player's unique id
+     */
+    void remove(UUID playerId) {
+        silentPlayers.remove(playerId);
+    }
 }

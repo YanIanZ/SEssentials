@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.util.Style;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -13,6 +14,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -36,10 +38,8 @@ import org.jetbrains.annotations.NotNull;
  */
 final class SilentChestView implements InventoryHolder {
 
-    /** Bukkit chest-family inventories must be sized in multiples of this. */
+    /** Bukkit's size-based custom inventories must be a multiple of this (a chest GUI). */
     private static final int SLOT_STEP = 9;
-    /** The largest chest-family inventory (a fully-merged double chest). */
-    private static final int MAX_SIZE = 54;
 
     private final Inventory inventory;
     private final UUID worldId;
@@ -49,16 +49,23 @@ final class SilentChestView implements InventoryHolder {
     private final Material expectedType;
 
     private SilentChestView(UUID worldId, int blockX, int blockY, int blockZ, Material expectedType,
-            int size, String title) {
+            int size, InventoryType sourceType, String title) {
         this.worldId = worldId;
         this.blockX = blockX;
         this.blockY = blockY;
         this.blockZ = blockZ;
         this.expectedType = expectedType;
-        // Safe to pass `this` here: CraftInventoryCustom only stores the reference
-        // for later getHolder() calls, it never invokes anything on it.
-        this.inventory = Bukkit.createInventory(this, size,
-                MiniMessage.miniMessage().deserialize(Style.title(title)));
+        Component titleComponent = MiniMessage.miniMessage().deserialize(Style.title(title));
+        // Size the snapshot to EXACTLY the source's slot count so every viewable slot
+        // maps 1:1 to a real container slot (nothing placed in it can be lost on close).
+        // Bukkit's size-based custom inventory only accepts multiples of 9, so for the
+        // odd-sized containers (hopper=5, furnace/blast/smoker=3, brewing=5) we build the
+        // inventory by its native type instead, which yields exactly that many slots.
+        // Safe to pass `this` here: CraftInventoryCustom only stores the reference for
+        // later getHolder() calls, it never invokes anything on it.
+        this.inventory = (size % SLOT_STEP == 0)
+                ? Bukkit.createInventory(this, size, titleComponent)
+                : Bukkit.createInventory(this, sourceType, titleComponent);
     }
 
     /**
@@ -73,14 +80,14 @@ final class SilentChestView implements InventoryHolder {
      */
     static void open(Player player, Block block, Container container) {
         Inventory source = container.getInventory();
-        int size = roundedSize(source.getSize());
+        int size = source.getSize();
         String title = friendlyName(block.getType());
 
         SilentChestView view = new SilentChestView(block.getWorld().getUID(), block.getX(), block.getY(),
-                block.getZ(), block.getType(), size, title);
+                block.getZ(), block.getType(), size, source.getType(), title);
 
-        int copyCount = Math.min(size, source.getSize());
-        for (int i = 0; i < copyCount; i++) {
+        // Snapshot inventory is sized to exactly `size`, so every source slot maps 1:1.
+        for (int i = 0; i < size; i++) {
             ItemStack item = source.getItem(i);
             view.inventory.setItem(i, item == null ? null : item.clone());
         }
@@ -115,13 +122,6 @@ final class SilentChestView implements InventoryHolder {
                 target.setItem(i, edited[i]);
             }
         });
-    }
-
-    /** Rounds {@code rawSize} up to the nearest multiple of 9, clamped to {@code [9, 54]}. */
-    private static int roundedSize(int rawSize) {
-        int rounded = ((rawSize + SLOT_STEP - 1) / SLOT_STEP) * SLOT_STEP;
-        rounded = Math.max(SLOT_STEP, rounded);
-        return Math.min(rounded, MAX_SIZE);
     }
 
     /** Renders a block material like {@code TRAPPED_CHEST} as {@code "Trapped Chest"}. */

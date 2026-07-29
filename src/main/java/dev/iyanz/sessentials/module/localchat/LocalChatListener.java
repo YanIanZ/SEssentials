@@ -1,6 +1,9 @@
 package dev.iyanz.sessentials.module.localchat;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -13,6 +16,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 /**
  * Restricts each chat message to nearby players by pruning the event's viewer set, with a
@@ -37,8 +44,16 @@ import org.bukkit.event.Listener;
  * <p>Runs at {@link EventPriority#NORMAL} with {@code ignoreCancelled = true}: this sits
  * after the moderation module's mute check ({@link EventPriority#LOWEST}) and the
  * staff-chat / chat-filter listeners ({@link EventPriority#LOW}), so a muted or diverted
- * message is never processed here. Only player locations and the viewer set are touched,
- * so the handler is safe to run on the asynchronous chat thread under Folia.</p>
+ * message is never processed here.</p>
+ *
+ * <p>The chat handler runs on the asynchronous chat thread, where calling {@link
+ * Player#getLocation()} on the sender or any viewer is illegal under Folia (it throws an
+ * entity thread-check {@link IllegalStateException}, which would abort the viewer prune
+ * and leak the message server-wide) and racy in general. To avoid touching entity/world
+ * API off-thread, each player's last-known position is cached in a {@link
+ * ConcurrentHashMap} that is updated only on that player's own region thread — on move,
+ * teleport and join — and evicted on quit. The async handler computes the in-range set
+ * purely from that cache and never calls {@code getLocation()}.</p>
  */
 public final class LocalChatListener implements Listener {
 
@@ -46,6 +61,13 @@ public final class LocalChatListener implements Listener {
     private static final String GLOBAL_PREFIX = "!";
 
     private final SEssentialsPlugin plugin;
+
+    /**
+     * Last-known position of each online player, written only on the owning player's region
+     * thread (move/teleport/join) and read by the async chat handler. Never holds a live
+     * Bukkit {@link Location}, so reading it off-thread triggers no entity thread-check.
+     */
+    private final Map<UUID, Pos> positions = new ConcurrentHashMap<>();
 
     /**
      * @param plugin the owning plugin, used for its live {@code local-chat.*} config
@@ -84,12 +106,17 @@ public final class LocalChatListener implements Listener {
      * the configured radius of the sender in the same world. Console and any other
      * non-player audience are preserved; the sender (distance zero) always survives.
      *
+     * <p>Distances are computed entirely from the {@link #positions} cache, never from a
+     * live {@link Location}, so this is safe on the async chat thread.</p>
+     *
      * @param event  the chat event whose viewers are being pruned
      * @param sender the player who sent the message
      */
     private void restrictToRadius(AsyncChatEvent event, Player sender) {
-        Location origin = sender.getLocation();
-        World world = origin.getWorld();
+        Pos origin = positions.get(sender.getUniqueId());
+        if (origin == null) {
+            return; // sender position not yet cached; leave delivery untouched rather than guess
+        }
         double radius = plugin.getConfig().getInt("local-chat.radius", 100);
         double radiusSquared = radius * radius;
 
@@ -98,10 +125,65 @@ public final class LocalChatListener implements Listener {
             if (!(viewer instanceof Player recipient)) {
                 continue; // keep the console and every other non-player audience
             }
-            Location location = recipient.getLocation();
-            if (!world.equals(location.getWorld()) || origin.distanceSquared(location) > radiusSquared) {
+            Pos pos = positions.get(recipient.getUniqueId());
+            if (pos == null || !origin.sameWorld(pos) || origin.distanceSquared(pos) > radiusSquared) {
                 event.viewers().remove(viewer);
             }
+        }
+    }
+
+    /** Caches the joining player's position on their own region thread. */
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        positions.put(player.getUniqueId(), Pos.of(player.getLocation()));
+    }
+
+    /** Refreshes the cache when a player moves into a new block (ignores look-only moves). */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onMove(PlayerMoveEvent event) {
+        if (!event.hasChangedBlock()) {
+            return;
+        }
+        positions.put(event.getPlayer().getUniqueId(), Pos.of(event.getTo()));
+    }
+
+    /** Refreshes the cache on teleport, including cross-world jumps a move event never reports. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        Location to = event.getTo();
+        if (to != null) {
+            positions.put(event.getPlayer().getUniqueId(), Pos.of(to));
+        }
+    }
+
+    /** Evicts the player's cached position on quit. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        positions.remove(event.getPlayer().getUniqueId());
+    }
+
+    /**
+     * An immutable, thread-safe snapshot of a player's position: the world's UID plus block
+     * coordinates. Deliberately does not retain a live {@link Location}/{@link World}, so it
+     * can be compared from any thread without an entity/world thread-check.
+     */
+    private record Pos(UUID world, double x, double y, double z) {
+
+        static Pos of(Location loc) {
+            World w = loc.getWorld();
+            return new Pos(w == null ? null : w.getUID(), loc.getX(), loc.getY(), loc.getZ());
+        }
+
+        boolean sameWorld(Pos other) {
+            return world != null && world.equals(other.world);
+        }
+
+        double distanceSquared(Pos other) {
+            double dx = x - other.x;
+            double dy = y - other.y;
+            double dz = z - other.z;
+            return dx * dx + dy * dy + dz * dz;
         }
     }
 }

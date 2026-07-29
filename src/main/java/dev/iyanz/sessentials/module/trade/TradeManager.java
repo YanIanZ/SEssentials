@@ -111,4 +111,17 @@ final class TradeManager {
         sessions.remove(session.leftId(), session);
         sessions.remove(session.rightId(), session);
     }
+
+    /**
+     * Drops every pending trade request that involves the given player, whether as the
+     * <em>target</em> (their pending map entry) or as the <em>requester</em> (any request
+     * they sent to someone else). Called on disconnect so the request map does not leak
+     * entries for ignored requests. Does not touch live sessions.
+     *
+     * @param playerId the UUID of the player who left
+     */
+    void removeRequests(UUID playerId) {
+        requests.remove(playerId);
+        requests.values().removeIf(req -> req.requester().equals(playerId));
+    }
 }

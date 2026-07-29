@@ -59,4 +59,17 @@ final class TeleportRequests {
         }
         return req;
     }
+
+    /**
+     * Drops every pending request that involves the given player, whether as the
+     * <em>target</em> (their pending map entry) or as the <em>requester</em> (any request
+     * they sent to someone else). Called on disconnect so the map does not leak entries for
+     * ignored requests.
+     *
+     * @param playerId the UUID of the player who left
+     */
+    void removePlayer(UUID playerId) {
+        pending.remove(playerId);
+        pending.values().removeIf(req -> req.requester().equals(playerId));
+    }
 }

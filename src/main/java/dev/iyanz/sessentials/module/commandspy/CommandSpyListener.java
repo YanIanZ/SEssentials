@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  * Mirrors every command a player runs to the online command-spy watchers.
@@ -74,5 +75,11 @@ final class CommandSpyListener implements Listener {
             }
             Schedulers.entity(plugin, online, () -> online.sendMessage(line));
         }
+    }
+
+    /** Drops the quitting player from the spy set, keeping it bounded across sessions. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        spies.remove(event.getPlayer().getUniqueId());
     }
 }

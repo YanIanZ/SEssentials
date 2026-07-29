@@ -69,7 +69,7 @@ public final class GraveModule implements EssModule {
 
         plugin.commands(reg -> reg.register(Commands.literal("grave")
                 .requires(s -> s.getSender().hasPermission("sessentials.grave"))
-                .executes(Cmds.playerExec(player -> GraveMenu.open(plugin, player, registry)))
+                .executes(Cmds.playerExec(player -> GraveMenu.open(player, registry)))
                 .build(), "Open your death grave to reclaim its items"));
 
         this.sweepTask = Schedulers.asyncRepeating(plugin, this::sweep, SWEEP_PERIOD_TICKS, SWEEP_PERIOD_TICKS);

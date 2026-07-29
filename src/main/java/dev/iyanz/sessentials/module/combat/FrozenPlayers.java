@@ -36,4 +36,15 @@ final class FrozenPlayers {
         frozen.remove(playerId);
         return false;
     }
+
+    /**
+     * Removes the given player from the frozen set, if present. Called on quit so a
+     * disconnected player's id does not linger (the set is otherwise only cleared by an
+     * explicit unfreeze toggle).
+     *
+     * @param playerId the player's unique id
+     */
+    void remove(UUID playerId) {
+        frozen.remove(playerId);
+    }
 }

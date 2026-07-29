@@ -122,13 +122,20 @@ public final class EconomyModule implements EssModule {
             Msg.err(sender, "You don't have that much.");
             return 0;
         }
-        if (eco.withdraw(sender.getUniqueId(), amount) && eco.deposit(target.getUniqueId(), amount)) {
-            Msg.value(sender, "Paid " + target.getName() + ":", eco.format(amount));
-            Msg.value(target, "Received from " + sender.getName() + ":", eco.format(amount));
-            return 1;
+        if (!eco.withdraw(sender.getUniqueId(), amount)) {
+            Msg.err(sender, "Payment failed.");
+            return 0;
         }
-        Msg.err(sender, "Payment failed.");
-        return 0;
+        if (!eco.deposit(target.getUniqueId(), amount)) {
+            // Withdrawal succeeded but the recipient could not be credited (e.g. they are
+            // at the provider's max-money cap). Refund the sender so no money is destroyed.
+            eco.deposit(sender.getUniqueId(), amount);
+            Msg.err(sender, "Payment failed.");
+            return 0;
+        }
+        Msg.value(sender, "Paid " + target.getName() + ":", eco.format(amount));
+        Msg.value(target, "Received from " + sender.getName() + ":", eco.format(amount));
+        return 1;
     }
 
     private int baltop(CommandContext<CommandSourceStack> ctx) {

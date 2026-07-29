@@ -98,6 +98,9 @@ public final class TradeListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        // Drop any pending trade request the leaving player was involved in (as target or
+        // requester) so the request map does not leak; live sessions are untouched here.
+        manager.removeRequests(event.getPlayer().getUniqueId());
         TradeSession session = manager.sessionOf(event.getPlayer().getUniqueId());
         if (session != null) {
             session.endBy(event.getPlayer(), "left the server; trade cancelled.");

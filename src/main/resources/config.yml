@@ -46,14 +46,15 @@ info:
 # ----------------------------------------------------------------------------
 
 # Custom join/quit messages (join-messages module). When enabled, replaces the
-# vanilla messages. Placeholder {player} is substituted with the player name.
+# vanilla messages. The <player> placeholder is substituted (as a literal component,
+# so names can't inject formatting). Legacy %player% is also accepted.
 join-messages:
   enabled: false
   # Suppress join/quit messages entirely (overrides the strings below).
   silent: false
-  first-join: "<yellow>Welcome <white>{player}</white> to the server!"
-  join: "<gray>{player} joined."
-  quit: "<gray>{player} left."
+  first-join: "<yellow>Welcome <white><player></white> to the server!"
+  join: "<gray><player> joined."
+  quit: "<gray><player> left."
 
 # First-join actions (first-join module) — runs once, the first time a player
 # ever joins.

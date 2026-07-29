@@ -1,6 +1,8 @@
 package dev.iyanz.sessentials.module.invtools;
 
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import dev.iyanz.sessentials.util.Msg;
 import dev.iyanz.sessentials.util.Style;
@@ -10,6 +12,9 @@ import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -39,6 +44,14 @@ final class ShulkerEditMenu implements InventoryHolder {
     /** A shulker box's inventory is always 3 rows of 9. */
     private static final int SIZE = 27;
 
+    /**
+     * The shulker-edit menu each player currently has open, if any. Refusing a second
+     * open while one is live — and always reconciling the box on close — means the held
+     * box and its editable copy are never both materialised, closing the dupe of
+     * extracting from the copy while the box still holds the originals.
+     */
+    private static final Map<UUID, ShulkerEditMenu> OPEN = new ConcurrentHashMap<>();
+
     private final UUID playerId;
     private final boolean offHand;
     private final int hotbarSlot;
@@ -63,6 +76,11 @@ final class ShulkerEditMenu implements InventoryHolder {
      * @param player the player opening the box
      */
     static void open(Player player) {
+        UUID id = player.getUniqueId();
+        if (OPEN.containsKey(id)) {
+            Msg.err(player, "You already have a shulker box open. Close it first.");
+            return;
+        }
         PlayerInventory inv = player.getInventory();
         int heldSlot = inv.getHeldItemSlot();
         ItemStack mainHand = inv.getItem(heldSlot);
@@ -89,6 +107,7 @@ final class ShulkerEditMenu implements InventoryHolder {
             ItemStack item = boxInventory.getItem(i);
             menu.inventory.setItem(i, item == null ? null : item.clone());
         }
+        OPEN.put(id, menu);
         player.openInventory(menu.inventory);
     }
 
@@ -125,6 +144,78 @@ final class ShulkerEditMenu implements InventoryHolder {
         } else {
             inv.setItem(hotbarSlot, current);
         }
+    }
+
+    /**
+     * Reconciles the edited copy back into the box and forgets the menu when its viewer
+     * closes it.
+     *
+     * @param menu the menu whose view was closed
+     */
+    static void handleClose(ShulkerEditMenu menu) {
+        menu.writeBack();
+        OPEN.remove(menu.playerId, menu);
+    }
+
+    /**
+     * Forgets (and best-effort writes back) a player's open menu when they disconnect, so
+     * the per-player map cannot leak.
+     *
+     * @param id the departing player's UUID
+     */
+    static void handleQuit(UUID id) {
+        ShulkerEditMenu menu = OPEN.remove(id);
+        if (menu != null) {
+            menu.writeBack();
+        }
+    }
+
+    /**
+     * @param event a click in this menu's view
+     * @return {@code true} if the click would move, drop or swap the box being edited; the
+     *         box must stay put so {@link #writeBack()} can reconcile it on close (a moved
+     *         or dropped box would let its originals survive alongside items already pulled
+     *         out of the editable copy)
+     */
+    boolean blocks(InventoryClickEvent event) {
+        // Swapping with the off hand (F) could smuggle the box out, or items into the
+        // hidden off-hand slot — never allowed while editing.
+        if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            return true;
+        }
+        if (offHand) {
+            // An off-hand box is not shown in the chest view, so nothing else can reach it.
+            return false;
+        }
+        // A number-key swap targeting the box's own hotbar slot would move it out.
+        if (event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() == hotbarSlot) {
+            return true;
+        }
+        // Any direct click on the box's own slot in the player's inventory (pick up, drop,
+        // shift-move, ...). Clicks in the top (editable) inventory are always allowed.
+        Inventory clicked = event.getClickedInventory();
+        return clicked != null
+                && !(clicked.getHolder() instanceof ShulkerEditMenu)
+                && event.getSlot() == hotbarSlot;
+    }
+
+    /**
+     * @param event a drag in this menu's view
+     * @return {@code true} if the drag would deposit into the edited box's own slot
+     */
+    boolean blocks(InventoryDragEvent event) {
+        if (offHand) {
+            return false;
+        }
+        for (int raw : event.getRawSlots()) {
+            Inventory dragged = event.getView().getInventory(raw);
+            if (dragged != null
+                    && !(dragged.getHolder() instanceof ShulkerEditMenu)
+                    && event.getView().convertSlot(raw) == hotbarSlot) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @return {@code true} if {@code item} is a placed-block item backed by a {@link ShulkerBox} state. */

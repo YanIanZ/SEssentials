@@ -52,21 +52,21 @@ final class PlaytimeRewardsService {
 
         YamlStore store = plugin.stores().get(STORE_NAME);
         String claimedPath = player.getUniqueId() + CLAIMED_SUFFIX;
-        List<String> claimed = new ArrayList<>(store.config().getStringList(claimedPath));
+        // Read via the monitor-guarded typed accessor (never the raw config()): several
+        // players' region threads run check() in parallel against the shared store, so a
+        // raw config() read/write would race (CME / lost update / dupe payout).
+        List<String> claimed = new ArrayList<>(store.getStringList(claimedPath));
 
-        boolean changed = false;
         for (RewardDefinition reward : rewards) {
             if (reward.minutes() > playMinutes || claimed.contains(reward.id())) {
                 continue;
             }
+            // Record and PERSIST the claim before dispatching the reward, so a re-entrant
+            // check can never observe this milestone as unclaimed and double-grant it.
             claimed.add(reward.id());
-            changed = true;
-            grant(plugin, player, reward);
-        }
-
-        if (changed) {
-            store.set(claimedPath, claimed);
+            store.set(claimedPath, new ArrayList<>(claimed));
             store.save();
+            grant(plugin, player, reward);
         }
     }
 

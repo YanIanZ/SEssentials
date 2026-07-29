@@ -1,7 +1,10 @@
 package dev.iyanz.sessentials.module.backpack;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.scheduler.Schedulers;
@@ -40,6 +43,15 @@ final class BackpackMenu implements InventoryHolder {
      */
     private static final int[] SIZES = {54, 45, 36, 27, 18, 9};
 
+    /**
+     * The single live backpack per online owner. Reusing one {@link Inventory} instance
+     * across every {@code /backpack} open makes the open GUI the single source of truth:
+     * a re-open never reloads a fresh copy from the store, so the same items can never be
+     * present in both a freshly loaded GUI and the player's real inventory at once.
+     * Entries are dropped on quit (see {@link #handleQuit}).
+     */
+    private static final Map<UUID, BackpackMenu> LIVE = new ConcurrentHashMap<>();
+
     private final UUID owner;
     private final Inventory inventory;
 
@@ -61,8 +73,15 @@ final class BackpackMenu implements InventoryHolder {
      * @param store  the {@code backpack} data store
      */
     static void open(SEssentialsPlugin plugin, Player player, YamlStore store) {
-        BackpackMenu menu = new BackpackMenu(player.getUniqueId(), sizeFor(player));
-        menu.load(store);
+        UUID id = player.getUniqueId();
+        // Reuse the one live inventory if the player already has a backpack in memory; only
+        // the very first open after login loads from the store. Same-UUID opens all run on
+        // the player's own region thread, so this get-or-create is not racy.
+        BackpackMenu menu = LIVE.computeIfAbsent(id, key -> {
+            BackpackMenu created = new BackpackMenu(key, sizeFor(player));
+            created.load(store);
+            return created;
+        });
         Schedulers.entity(plugin, player, () -> player.openInventory(menu.inventory));
     }
 
@@ -87,6 +106,38 @@ final class BackpackMenu implements InventoryHolder {
     }
 
     /**
+     * Serialises every slot of the live inventory (empty slots included, as {@code null}
+     * entries) into {@code store}. Called on close for durability and on quit before the
+     * live instance is dropped. Reads are in-memory; {@link YamlStore#save()} flushes to
+     * disk asynchronously.
+     *
+     * @param store the {@code backpack} data store
+     */
+    void save(YamlStore store) {
+        ItemStack[] contents = inventory.getContents();
+        List<ItemStack> serialized = new ArrayList<>(contents.length);
+        for (ItemStack item : contents) {
+            serialized.add(item);
+        }
+        store.set(owner + ".contents", serialized);
+        store.save();
+    }
+
+    /**
+     * Persists and forgets a player's live backpack when they disconnect, so the map does
+     * not leak and a fresh instance is loaded from the store on their next login.
+     *
+     * @param id    the departing player's UUID
+     * @param store the {@code backpack} data store
+     */
+    static void handleQuit(UUID id, YamlStore store) {
+        BackpackMenu menu = LIVE.remove(id);
+        if (menu != null) {
+            menu.save(store);
+        }
+    }
+
+    /**
      * Selects a backpack size from {@code player}'s permissions: the largest {@code n}
      * for which they hold {@code sessentials.backpack.<n>}, or {@link #DEFAULT_SIZE} if
      * they hold no such size permission.
@@ -101,11 +152,6 @@ final class BackpackMenu implements InventoryHolder {
             }
         }
         return DEFAULT_SIZE;
-    }
-
-    /** @return the UUID of the player this backpack belongs to. */
-    UUID owner() {
-        return owner;
     }
 
     @Override

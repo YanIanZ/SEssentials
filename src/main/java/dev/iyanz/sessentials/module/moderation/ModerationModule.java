@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +30,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  * Moderation commands: kick, ban/tempban/unban, mute/unmute (chat-suppressing), kill,
@@ -40,9 +42,20 @@ public final class ModerationModule implements EssModule, Listener {
 
     private static final String SOURCE = "SEssentials";
 
+    /** Map sentinel for a permanent mute (never expires). The store persists {@code 0}. */
+    private static final long PERMANENT = Long.MAX_VALUE;
+
     private SEssentialsPlugin plugin;
     private YamlStore store;
     private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Source of truth for the async chat mute check: player UUID → expiry epoch-millis,
+     * or {@link #PERMANENT} for a permanent mute. Hydrated from the store on enable and
+     * kept in sync by {@code /mute} and {@code /unmute}. The async chat listener reads
+     * ONLY this map so it never touches the non-thread-safe {@link YamlStore} config.
+     */
+    private final Map<UUID, Long> mutes = new ConcurrentHashMap<>();
 
     @Override
     public String name() {
@@ -53,6 +66,7 @@ public final class ModerationModule implements EssModule, Listener {
     public void enable(SEssentialsPlugin plugin) {
         this.plugin = plugin;
         this.store = plugin.stores().get("moderation");
+        hydrateMutes();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getServer().getPluginManager().registerEvents(new InvseeListener(), plugin);
 
@@ -196,6 +210,7 @@ public final class ModerationModule implements EssModule, Listener {
         }
         store.set("mutes." + target.getUniqueId(), until);
         store.save();
+        mutes.put(target.getUniqueId(), until == 0L ? PERMANENT : until);
         Msg.ok(sender, "Muted " + name + (duration != null ? " for " + duration : " permanently") + ".");
         Player online = Bukkit.getPlayerExact(name);
         if (online != null) {
@@ -209,6 +224,7 @@ public final class ModerationModule implements EssModule, Listener {
         OfflinePlayer target = Bukkit.getOfflinePlayer(name);
         store.remove("mutes." + target.getUniqueId());
         store.save();
+        mutes.remove(target.getUniqueId());
         Msg.ok(ctx.getSource().getSender(), "Unmuted " + name + ".");
         return 1;
     }
@@ -226,15 +242,19 @@ public final class ModerationModule implements EssModule, Listener {
     private void toggleVanish(Player p) {
         if (vanished.remove(p.getUniqueId())) {
             for (Player other : Bukkit.getOnlinePlayers()) {
-                other.showPlayer(plugin, p);
+                // Visibility must be mutated on the OTHER player's region thread (Folia).
+                Schedulers.entity(plugin, other, () -> other.showPlayer(plugin, p));
             }
             Msg.ok(p, "You are now visible.");
         } else {
             vanished.add(p.getUniqueId());
             for (Player other : Bukkit.getOnlinePlayers()) {
-                if (!other.hasPermission("sessentials.vanish")) {
-                    other.hidePlayer(plugin, p);
-                }
+                // Visibility must be mutated on the OTHER player's region thread (Folia).
+                Schedulers.entity(plugin, other, () -> {
+                    if (!other.hasPermission("sessentials.vanish")) {
+                        other.hidePlayer(plugin, p);
+                    }
+                });
             }
             Msg.ok(p, "You are now vanished.");
         }
@@ -267,22 +287,49 @@ public final class ModerationModule implements EssModule, Listener {
         return 1;
     }
 
+    /** Loads persisted mutes from the store into {@link #mutes} once, on enable. */
+    private void hydrateMutes() {
+        for (String key : store.keys("mutes")) {
+            try {
+                UUID id = UUID.fromString(key);
+                long until = store.getLong("mutes." + key, 0L);
+                mutes.put(id, until == 0L ? PERMANENT : until);
+            } catch (IllegalArgumentException ignored) {
+                // Skip a malformed (non-UUID) key rather than fail enable.
+            }
+        }
+    }
+
     // --- listeners ---------------------------------------------------------
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onChat(AsyncChatEvent event) {
-        long until = store.config().getLong("mutes." + event.getPlayer().getUniqueId(), -1L);
-        if (until == -1L) {
+        // Async thread: read ONLY the thread-safe map — never the raw store config.
+        UUID id = event.getPlayer().getUniqueId();
+        Long until = mutes.get(id);
+        if (until == null) {
             return; // not muted
         }
-        if (until != 0L && System.currentTimeMillis() > until) {
-            store.remove("mutes." + event.getPlayer().getUniqueId());
-            store.save();
-            return; // expired
+        if (until != PERMANENT && System.currentTimeMillis() > until) {
+            // Expired: drop from the map here (thread-safe), and clean the store off
+            // this async chat thread (the store is not safe to mutate from here).
+            if (mutes.remove(id, until)) {
+                Schedulers.async(plugin, t -> {
+                    store.remove("mutes." + id);
+                    store.save();
+                });
+            }
+            return;
         }
         event.setCancelled(true);
         event.viewers().clear();
         Msg.err(event.getPlayer(), "You are muted.");
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        // Prevent the session-state vanished set from leaking UUIDs of gone players.
+        vanished.remove(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

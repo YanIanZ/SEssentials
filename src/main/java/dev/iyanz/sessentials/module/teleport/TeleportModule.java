@@ -27,7 +27,7 @@ public final class TeleportModule implements EssModule {
 
     @Override
     public void enable(SEssentialsPlugin plugin) {
-        plugin.getServer().getPluginManager().registerEvents(new TeleportHistoryListener(history), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new TeleportHistoryListener(history, requests), plugin);
 
         TeleportCommands.register(plugin);
         TeleportRequestCommands.register(plugin, requests);

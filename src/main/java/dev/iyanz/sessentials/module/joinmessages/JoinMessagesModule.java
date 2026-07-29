@@ -12,15 +12,17 @@ import io.papermc.paper.command.brigadier.Commands;
  * config section, read live on every event so a reload applies at once; this class only
  * wires the listener in and exposes {@code /joinmessages reload} to re-read the config.
  *
- * <p>Config keys (all under {@code join-messages}, {@code %player%} is substituted with
- * the player's name and the result is parsed as MiniMessage):</p>
+ * <p>Config keys (all under {@code join-messages}). The {@code &lt;player&gt;} placeholder
+ * is replaced with the player's name as a literal component after the operator-authored
+ * MiniMessage is parsed, so a name can never inject markup; the legacy {@code %player%}
+ * token is still accepted for backward compatibility.</p>
  * <pre>
  * join-messages:
  *   enabled: false                              # master switch; when off, vanilla messages stay
  *   silent: false                               # when on, suppress the join/quit broadcast entirely
- *   join: "&lt;yellow&gt;%player% &lt;gray&gt;joined."          # message for a returning player joining
- *   quit: "&lt;yellow&gt;%player% &lt;gray&gt;left."            # message for a player leaving
- *   first-join: "&lt;gold&gt;Welcome &lt;yellow&gt;%player%&lt;gold&gt;!" # message for a player's very first join
+ *   join: "&lt;yellow&gt;&lt;player&gt; &lt;gray&gt;joined."          # message for a returning player joining
+ *   quit: "&lt;yellow&gt;&lt;player&gt; &lt;gray&gt;left."            # message for a player leaving
+ *   first-join: "&lt;gold&gt;Welcome &lt;yellow&gt;&lt;player&gt;&lt;gold&gt;!" # message for a player's very first join
  * </pre>
  */
 @SuppressWarnings("UnstableApiUsage")

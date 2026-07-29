@@ -53,7 +53,7 @@ public final class CombatModule implements EssModule {
         this.plugin = plugin;
 
         plugin.getServer().getPluginManager().registerEvents(new FreezeMoveListener(frozenPlayers), plugin);
-        plugin.getServer().getPluginManager().registerEvents(new CombatTagListener(plugin, combatTag), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new CombatTagListener(plugin, combatTag, frozenPlayers), plugin);
 
         this.sweepTask = Schedulers.asyncRepeating(plugin, this::sweepExpiredTags, SWEEP_PERIOD_TICKS, SWEEP_PERIOD_TICKS);
 

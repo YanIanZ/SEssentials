@@ -29,6 +29,8 @@ public final class MessagingModule implements EssModule {
 
     @Override
     public void enable(SEssentialsPlugin plugin) {
+        plugin.getServer().getPluginManager()
+                .registerEvents(new MessagingQuitListener(lastMessaged, spies), plugin);
         new PrivateMessaging(lastMessaged, spies).register(plugin);
         BroadcastCommands.register(plugin);
     }

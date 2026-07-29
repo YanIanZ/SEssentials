@@ -1,5 +1,6 @@
 package dev.iyanz.sessentials.module.butcher;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -8,6 +9,7 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.api.EssModule;
 import dev.iyanz.sessentials.command.Cmds;
+import dev.iyanz.sessentials.scheduler.Schedulers;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -31,9 +33,11 @@ import org.bukkit.entity.Villager;
  * removed: {@code monsters} (the default), {@code animals}, or {@code all}.</p>
  *
  * <p>Folia: the sweep runs inside the command executor, which is already the sender's
- * region thread, and it only reads and removes entities gathered from around the sender
- * ({@code getWorld().getNearbyEntities(getLocation(), ...)}) — the same region — so no
- * cross-region scheduler hop is required.</p>
+ * region thread, so the entity scan ({@code getWorld().getNearbyEntities(getLocation(),
+ * ...)}) and the filtering happen there. Because {@code getNearbyEntities} can return
+ * entities that belong to <em>other</em> regions, each removal is hopped onto its own
+ * entity's region thread via {@link Schedulers#entity} rather than being called inline —
+ * the candidates are collected first, then a per-entity removal is scheduled for each.</p>
  */
 @SuppressWarnings("UnstableApiUsage")
 public final class ButcherModule implements EssModule {
@@ -56,29 +60,29 @@ public final class ButcherModule implements EssModule {
         plugin.commands(reg -> reg.register(
                 Commands.literal("butcher")
                         .requires(s -> s.getSender().hasPermission(PERMISSION))
-                        .executes(Cmds.playerExec(p -> sweep(p, DEFAULT_RADIUS, ButcherType.MONSTERS)))
+                        .executes(Cmds.playerExec(p -> sweep(plugin, p, DEFAULT_RADIUS, ButcherType.MONSTERS)))
                         .then(Commands.argument("radius", IntegerArgumentType.integer(1, MAX_RADIUS))
-                                .executes(ctx -> execute(ctx, ButcherType.MONSTERS))
+                                .executes(ctx -> execute(plugin, ctx, ButcherType.MONSTERS))
                                 .then(Commands.argument("type", StringArgumentType.word())
                                         .suggests(ButcherType.SUGGESTIONS)
-                                        .executes(ButcherModule::executeTyped)))
+                                        .executes(ctx -> executeTyped(plugin, ctx))))
                         .build(),
                 "Remove nearby mobs (default monsters within " + DEFAULT_RADIUS + " blocks)",
                 List.of("killmobs", "mobkill")));
     }
 
     /** Runs a sweep with a parsed radius and a fixed {@code type}. */
-    private static int execute(CommandContext<CommandSourceStack> ctx, ButcherType type) {
+    private static int execute(SEssentialsPlugin plugin, CommandContext<CommandSourceStack> ctx, ButcherType type) {
         Player player = Cmds.player(ctx);
         if (player == null) {
             return 0;
         }
-        sweep(player, IntegerArgumentType.getInteger(ctx, "radius"), type);
+        sweep(plugin, player, IntegerArgumentType.getInteger(ctx, "radius"), type);
         return 1;
     }
 
     /** Runs a sweep with a parsed radius and a user-supplied type keyword. */
-    private static int executeTyped(CommandContext<CommandSourceStack> ctx) {
+    private static int executeTyped(SEssentialsPlugin plugin, CommandContext<CommandSourceStack> ctx) {
         Player player = Cmds.player(ctx);
         if (player == null) {
             return 0;
@@ -89,7 +93,7 @@ public final class ButcherModule implements EssModule {
             Msg.err(player, "Unknown type \"" + rawType + "\". Use all, monsters, or animals.");
             return 0;
         }
-        sweep(player, IntegerArgumentType.getInteger(ctx, "radius"), type);
+        sweep(plugin, player, IntegerArgumentType.getInteger(ctx, "radius"), type);
         return 1;
     }
 
@@ -97,19 +101,28 @@ public final class ButcherModule implements EssModule {
      * Removes every matching living entity within {@code radius} blocks of {@code player}
      * in their world and reports the count.
      *
+     * <p>Candidates are collected on the sender's region thread (the scan runs there), then
+     * each removal is hopped onto that entity's own region thread via {@link
+     * Schedulers#entity} — an entity returned by {@code getNearbyEntities} may belong to a
+     * different Folia region, and mutating it inline would trip a cross-region thread check.</p>
+     *
+     * @param plugin the owning plugin, used to schedule the per-entity removals
      * @param player the sender to search around and to message
      * @param radius the cubic search radius in blocks
      * @param type   the category of entity to remove
      */
-    private static void sweep(Player player, int radius, ButcherType type) {
+    private static void sweep(SEssentialsPlugin plugin, Player player, int radius, ButcherType type) {
         double r = radius;
-        int removed = 0;
+        List<LivingEntity> targets = new ArrayList<>();
         for (Entity entity : player.getWorld().getNearbyEntities(player.getLocation(), r, r, r)) {
             if (entity instanceof LivingEntity living && isRemovable(living, type)) {
-                living.remove();
-                removed++;
+                targets.add(living);
             }
         }
+        for (LivingEntity living : targets) {
+            Schedulers.entity(plugin, living, living::remove);
+        }
+        int removed = targets.size();
         if (removed == 0) {
             Msg.info(player, "No " + type.noun(2) + " found within " + radius + " blocks.");
         } else {

@@ -36,7 +36,7 @@ final class MailService {
 
     /** @return the raw, encoded mail entries for {@code uuid}, oldest first (never {@code null}). */
     static List<String> rawMessages(YamlStore store, UUID uuid) {
-        return store.config().getStringList(uuid + MESSAGES_SUFFIX);
+        return store.getStringList(uuid + MESSAGES_SUFFIX);
     }
 
     /** @return {@code raw} decoded into {@link Entry} objects, skipping any malformed lines. */
@@ -55,7 +55,10 @@ final class MailService {
     static void add(SEssentialsPlugin plugin, UUID uuid, String fromName, String text) {
         YamlStore store = store(plugin);
         String path = uuid + MESSAGES_SUFFIX;
-        List<String> messages = new ArrayList<>(store.config().getStringList(path));
+        // Read-modify-write through the monitor-guarded typed accessors so a concurrent
+        // /mail send (or the async save) can't race the raw FileConfiguration and lose
+        // messages or throw a ConcurrentModificationException.
+        List<String> messages = new ArrayList<>(store.getStringList(path));
         messages.add(encode(fromName, System.currentTimeMillis(), text));
         store.set(path, messages);
         store.save();

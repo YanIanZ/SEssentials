@@ -37,4 +37,14 @@ final class GodService {
         godPlayers.remove(playerId);
         return false;
     }
+
+    /**
+     * Disables god mode for the given player, keeping the registry bounded when a player
+     * disconnects. A no-op if the player was not in god mode.
+     *
+     * @param playerId the player's unique id
+     */
+    void remove(UUID playerId) {
+        godPlayers.remove(playerId);
+    }
 }

@@ -39,14 +39,17 @@ final class CombatTagListener implements Listener {
 
     private final SEssentialsPlugin plugin;
     private final CombatTag combatTag;
+    private final FrozenPlayers frozenPlayers;
 
     /**
-     * @param plugin    the owning plugin, used for config and scheduling
-     * @param combatTag the shared combat-tag registry
+     * @param plugin        the owning plugin, used for config and scheduling
+     * @param combatTag     the shared combat-tag registry
+     * @param frozenPlayers the shared frozen-player registry, cleaned up on quit
      */
-    CombatTagListener(SEssentialsPlugin plugin, CombatTag combatTag) {
+    CombatTagListener(SEssentialsPlugin plugin, CombatTag combatTag, FrozenPlayers frozenPlayers) {
         this.plugin = plugin;
         this.combatTag = combatTag;
+        this.frozenPlayers = frozenPlayers;
     }
 
     /** Tags both participants when a player damages another player (directly or by projectile). */
@@ -95,17 +98,27 @@ final class CombatTagListener implements Listener {
         if (!combatTag.isTagged(player.getUniqueId())) {
             return;
         }
-        String label = event.getMessage().split(" ", 2)[0].toLowerCase(Locale.ROOT);
+        String firstToken = event.getMessage().split(" ", 2)[0].toLowerCase(Locale.ROOT);
+        // Strip any leading "namespace:" alias (e.g. "/minecraft:tp", "/sessentials:home")
+        // down to the bare "/label" — otherwise every command's namespaced alias slips
+        // straight past the block and lets a tagged player combat-log via teleport.
+        int colon = firstToken.indexOf(':');
+        String label = colon >= 0 ? "/" + firstToken.substring(colon + 1) : firstToken;
         if (BLOCKED_COMMANDS.contains(label)) {
             event.setCancelled(true);
             Msg.err(player, "You can't do that in combat.");
         }
     }
 
-    /** Punishes combat logging: a tagged player who disconnects dies on the way out. */
+    /**
+     * Punishes combat logging (a tagged player who disconnects dies on the way out) and
+     * releases the player's frozen state so their id does not leak from
+     * {@link FrozenPlayers} — this is the only quit handler the combat module has.
+     */
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        frozenPlayers.remove(player.getUniqueId());
         if (combatTag.isTagged(player.getUniqueId())) {
             combatTag.untag(player.getUniqueId());
             player.setHealth(0.0);

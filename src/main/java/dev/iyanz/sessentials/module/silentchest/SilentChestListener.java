@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
 /**
@@ -60,5 +61,11 @@ final class SilentChestListener implements Listener {
 
         event.setCancelled(true);
         SilentChestView.open(player, block, container);
+    }
+
+    /** Clears the quitting player's silent-mode flag so their id does not leak from the set. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        service.remove(event.getPlayer().getUniqueId());
     }
 }

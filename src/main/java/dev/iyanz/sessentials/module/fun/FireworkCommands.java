@@ -66,13 +66,15 @@ final class FireworkCommands {
     }
 
     private static void launch(SEssentialsPlugin plugin, CommandSender sender, Player target) {
-        Location location = target.getLocation();
-        Schedulers.entity(plugin, target, () -> target.getWorld().spawn(location, Firework.class, firework -> {
-            FireworkMeta meta = firework.getFireworkMeta();
-            meta.addEffect(randomEffect());
-            meta.setPower(ThreadLocalRandom.current().nextInt(MIN_POWER, MAX_POWER + 1));
-            firework.setFireworkMeta(meta);
-        }));
+        Schedulers.entity(plugin, target, () -> {
+            Location location = target.getLocation();
+            target.getWorld().spawn(location, Firework.class, firework -> {
+                FireworkMeta meta = firework.getFireworkMeta();
+                meta.addEffect(randomEffect());
+                meta.setPower(ThreadLocalRandom.current().nextInt(MIN_POWER, MAX_POWER + 1));
+                firework.setFireworkMeta(meta);
+            });
+        });
         if (!target.equals(sender)) {
             Msg.ok(sender, "Launched a firework at " + target.getName() + ".");
         }

@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  * Enforces portals: teleports a player who moves into a portal's bounding box to its
@@ -69,6 +70,12 @@ final class PortalMoveListener implements Listener {
             return;
         }
         player.teleportAsync(destination);
+    }
+
+    /** Drops the departing player's debounce entry so {@link #lastTeleport} doesn't leak across sessions. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        lastTeleport.remove(event.getPlayer().getUniqueId());
     }
 
     /** @return whether {@code from} and {@code to} occupy the same block. */

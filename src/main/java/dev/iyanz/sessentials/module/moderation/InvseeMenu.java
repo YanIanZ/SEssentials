@@ -1,5 +1,6 @@
 package dev.iyanz.sessentials.module.moderation;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
@@ -43,6 +44,13 @@ public final class InvseeMenu implements InventoryHolder {
     private final UUID targetId;
     private final String targetName;
     private final Inventory inventory;
+    /**
+     * The target's inventory as it was when the GUI opened, indexed by GUI slot (0-35
+     * storage, {@link #HELMET}..{@link #OFFHAND}). On close we diff the live GUI contents
+     * against this snapshot and write back ONLY the slots the moderator actually changed,
+     * so edits the target made to untouched slots while being viewed are not clobbered.
+     */
+    private final ItemStack[] openSnapshot = new ItemStack[54];
 
     private InvseeMenu(SEssentialsPlugin plugin, UUID targetId, String targetName) {
         this.plugin = plugin;
@@ -82,12 +90,18 @@ public final class InvseeMenu implements InventoryHolder {
                           ItemStack legs, ItemStack boots, ItemStack offhand) {
         for (int i = 0; i < 36 && i < storage.length; i++) {
             inventory.setItem(i, storage[i]);
+            openSnapshot[i] = storage[i];
         }
         inventory.setItem(HELMET, helmet);
         inventory.setItem(CHEST, chest);
         inventory.setItem(LEGS, legs);
         inventory.setItem(BOOTS, boots);
         inventory.setItem(OFFHAND, offhand);
+        openSnapshot[HELMET] = helmet;
+        openSnapshot[CHEST] = chest;
+        openSnapshot[LEGS] = legs;
+        openSnapshot[BOOTS] = boots;
+        openSnapshot[OFFHAND] = offhand;
         // Inert labels on the rest of the armour row.
         ItemStack filler = new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE).name(" ").clean().build();
         for (int i = 36; i < 45; i++) {
@@ -107,7 +121,14 @@ public final class InvseeMenu implements InventoryHolder {
                 || guiSlot == LEGS || guiSlot == BOOTS || guiSlot == OFFHAND;
     }
 
-    /** Writes the GUI's editable slots back to the (online) target's inventory. */
+    /**
+     * Applies the moderator's edits back to the (online) target's LIVE inventory. Only
+     * the slots whose GUI content differs from the open-time {@link #openSnapshot} are
+     * written; every other slot keeps the target's current live value. This avoids the
+     * dupe/delete that a blanket snapshot overwrite would cause when the target changed
+     * their own inventory while it was being viewed. All live-inventory access runs on
+     * the target's region thread (Folia-safe).
+     */
     void writeBack() {
         Player target = Bukkit.getPlayer(targetId);
         if (target == null) {
@@ -115,18 +136,41 @@ public final class InvseeMenu implements InventoryHolder {
         }
         ItemStack[] contents = inventory.getContents();
         Schedulers.entity(plugin, target, () -> {
+            // Re-read the LIVE inventory on the target's own region thread and mutate
+            // only the slots the moderator actually changed; untouched slots are left
+            // as the target's current live contents.
             PlayerInventory inv = target.getInventory();
-            ItemStack[] storage = new ItemStack[36];
             for (int i = 0; i < 36; i++) {
-                storage[i] = contents[i];
+                if (changed(contents[i], openSnapshot[i])) {
+                    inv.setItem(i, contents[i]);
+                }
             }
-            inv.setStorageContents(storage);
-            inv.setHelmet(contents[HELMET]);
-            inv.setChestplate(contents[CHEST]);
-            inv.setLeggings(contents[LEGS]);
-            inv.setBoots(contents[BOOTS]);
-            inv.setItemInOffHand(contents[OFFHAND] == null ? new ItemStack(Material.AIR) : contents[OFFHAND]);
+            if (changed(contents[HELMET], openSnapshot[HELMET])) {
+                inv.setHelmet(contents[HELMET]);
+            }
+            if (changed(contents[CHEST], openSnapshot[CHEST])) {
+                inv.setChestplate(contents[CHEST]);
+            }
+            if (changed(contents[LEGS], openSnapshot[LEGS])) {
+                inv.setLeggings(contents[LEGS]);
+            }
+            if (changed(contents[BOOTS], openSnapshot[BOOTS])) {
+                inv.setBoots(contents[BOOTS]);
+            }
+            if (changed(contents[OFFHAND], openSnapshot[OFFHAND])) {
+                inv.setItemInOffHand(contents[OFFHAND] == null ? new ItemStack(Material.AIR) : contents[OFFHAND]);
+            }
         });
+    }
+
+    /** @return {@code true} if the moderator changed this slot (GUI value != open snapshot). */
+    private static boolean changed(ItemStack gui, ItemStack snapshot) {
+        return !Objects.equals(normalize(gui), normalize(snapshot));
+    }
+
+    /** Treats AIR and {@code null} as the same "empty" value for diffing. */
+    private static ItemStack normalize(ItemStack item) {
+        return (item == null || item.getType() == Material.AIR) ? null : item;
     }
 
     private static ItemStack[] clone(ItemStack[] src) {

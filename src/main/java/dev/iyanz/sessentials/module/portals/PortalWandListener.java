@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -61,6 +62,12 @@ final class PortalWandListener implements Listener {
             selections.setPos2(player.getUniqueId(), location);
             Msg.ok(player, "Position 2 set: " + coords(location));
         }
+    }
+
+    /** Discards the departing player's in-progress selection so the map doesn't leak across sessions. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        selections.remove(event.getPlayer().getUniqueId());
     }
 
     /** @return {@code "x, y, z"} block coordinates for a chat-friendly message. */

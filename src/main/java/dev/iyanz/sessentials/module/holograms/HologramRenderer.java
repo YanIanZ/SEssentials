@@ -58,7 +58,7 @@ final class HologramRenderer {
     static void unloadAll(SEssentialsPlugin plugin) {
         NamespacedKey tag = tagKey(plugin);
         for (World world : Bukkit.getWorlds()) {
-            Bukkit.getRegionScheduler().execute(plugin, world, 0, 0, () -> removeTagged(world, tag));
+            Bukkit.getGlobalRegionScheduler().execute(plugin, () -> removeTagged(plugin, world, tag));
         }
         ACTIVE.clear();
     }
@@ -141,8 +141,8 @@ final class HologramRenderer {
     /** Removes stale tagged entities in {@code world}, then spawns every hologram persisted for it. */
     private static void cleanupAndSpawn(SEssentialsPlugin plugin, World world) {
         NamespacedKey tag = tagKey(plugin);
-        Bukkit.getRegionScheduler().execute(plugin, world, 0, 0, () -> {
-            removeTagged(world, tag);
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
+            removeTagged(plugin, world, tag);
             for (String id : Holograms.ids(plugin)) {
                 Location location = Holograms.location(plugin, id);
                 if (location == null || location.getWorld() == null || !location.getWorld().equals(world)) {
@@ -153,11 +153,19 @@ final class HologramRenderer {
         });
     }
 
-    /** Removes every entity in {@code world} tagged with {@code tag}. Must run on {@code world}'s region thread. */
-    private static void removeTagged(World world, NamespacedKey tag) {
+    /**
+     * Removes every entity in {@code world} tagged with {@code tag}. Each removal is
+     * dispatched onto the offending entity's <em>own</em> region thread via its
+     * {@link Entity#getScheduler() entity scheduler}, so a tagged display far from the
+     * origin (owned by a different Folia region) is removed on the thread that owns it
+     * rather than tripping the thread-ownership check. The just-spawned fresh displays
+     * from {@link #cleanupAndSpawn} do not yet exist during this scan, so they are never
+     * swept away.
+     */
+    private static void removeTagged(SEssentialsPlugin plugin, World world, NamespacedKey tag) {
         for (Entity entity : world.getEntities()) {
             if (entity instanceof TextDisplay && entity.getPersistentDataContainer().has(tag, PersistentDataType.STRING)) {
-                entity.remove();
+                entity.getScheduler().run(plugin, task -> entity.remove(), null);
             }
         }
     }

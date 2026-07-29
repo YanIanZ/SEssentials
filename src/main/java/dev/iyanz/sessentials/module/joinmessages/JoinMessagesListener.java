@@ -3,6 +3,7 @@ package dev.iyanz.sessentials.module.joinmessages;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.util.Msg;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,13 +22,13 @@ import org.bukkit.event.player.PlayerQuitEvent;
 final class JoinMessagesListener implements Listener {
 
     /** Default line for a returning player joining. */
-    private static final String DEFAULT_JOIN = "<yellow>%player% <gray>joined.";
+    private static final String DEFAULT_JOIN = "<yellow><player> <gray>joined.";
 
     /** Default line for a player leaving. */
-    private static final String DEFAULT_QUIT = "<yellow>%player% <gray>left.";
+    private static final String DEFAULT_QUIT = "<yellow><player> <gray>left.";
 
     /** Default line for a player's very first join. */
-    private static final String DEFAULT_FIRST_JOIN = "<gold>Welcome <yellow>%player%<gold>!";
+    private static final String DEFAULT_FIRST_JOIN = "<gold>Welcome <yellow><player><gold>!";
 
     private final SEssentialsPlugin plugin;
 
@@ -81,14 +82,22 @@ final class JoinMessagesListener implements Listener {
     }
 
     /**
-     * Substitutes {@code %player%} with the player's name and parses the result as MiniMessage.
+     * Renders a template into a component, supplying the player's name as a LITERAL
+     * component through the {@code <player>} MiniMessage placeholder.
      *
-     * @param template the raw config line (may contain {@code %player%} and MiniMessage tags)
+     * <p>The name is never string-substituted into the template before parsing, so markup
+     * in a name (possible under offline-mode / a proxy / Floodgate) is shown verbatim and a
+     * malformed tag can never throw a {@code ParsingException} that would abort the
+     * broadcast. Legacy {@code %player%} tokens in an existing config are first rewritten to
+     * {@code <player>} so old configs keep working.</p>
+     *
+     * @param template the raw config line (may contain {@code <player>} or legacy
+     *                  {@code %player%}, plus operator-authored MiniMessage tags)
      * @param player   the player the message is about
      * @return the rendered component
      */
     private static Component render(String template, Player player) {
-        String line = template == null ? "" : template.replace("%player%", player.getName());
-        return Msg.mm(line);
+        String line = template == null ? "" : template.replace("%player%", "<player>");
+        return Msg.mm(line, Placeholder.component("player", Component.text(player.getName())));
     }
 }

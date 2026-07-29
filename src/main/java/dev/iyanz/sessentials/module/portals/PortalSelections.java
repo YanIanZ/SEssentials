@@ -33,4 +33,9 @@ final class PortalSelections {
     Location[] get(UUID uuid) {
         return selections.get(uuid);
     }
+
+    /** Discards {@code uuid}'s in-progress selection, if any (e.g. when the player disconnects). */
+    void remove(UUID uuid) {
+        selections.remove(uuid);
+    }
 }

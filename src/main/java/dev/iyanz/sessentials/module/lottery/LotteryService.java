@@ -114,7 +114,15 @@ final class LotteryService {
         }
         UUID winner = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
         double winnings = pot;
-        eco.deposit(winner, winnings);
+        if (!eco.deposit(winner, winnings)) {
+            // Payout failed (e.g. winner at the provider's max-money cap). Do NOT clear the
+            // pool/pot — keep them so the whole pot rolls over to the next draw instead of
+            // being destroyed.
+            plugin.getLogger().warning("Lottery payout of " + eco.format(winnings) + " to " + winner
+                    + " failed; keeping the pot for the next draw.");
+            broadcast(Style.GRAY + SmallCaps.of("Lottery payout failed — the pot rolls over to the next draw."));
+            return;
+        }
         pool.clear();
         pot = 0.0;
         broadcast(Style.INFO + "<bold>" + SmallCaps.of("Lottery") + "</bold> "

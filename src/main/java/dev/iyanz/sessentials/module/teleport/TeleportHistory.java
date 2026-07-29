@@ -33,4 +33,14 @@ final class TeleportHistory {
     Location get(UUID playerId) {
         return previous.get(playerId);
     }
+
+    /**
+     * Forgets the player's stored {@code /back} location. Called on disconnect so the
+     * per-player map does not grow without bound.
+     *
+     * @param playerId the player's UUID
+     */
+    void remove(UUID playerId) {
+        previous.remove(playerId);
+    }
 }

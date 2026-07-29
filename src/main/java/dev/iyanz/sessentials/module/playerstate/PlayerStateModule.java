@@ -30,6 +30,7 @@ public final class PlayerStateModule implements EssModule {
     @Override
     public void enable(SEssentialsPlugin plugin) {
         plugin.getServer().getPluginManager().registerEvents(new GodDamageListener(godService), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new GodQuitListener(godService), plugin);
 
         plugin.commands(reg -> {
             VitalityCommands.register(reg, plugin, godService);

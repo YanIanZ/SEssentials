@@ -3,8 +3,6 @@ package dev.iyanz.sessentials.module.grave;
 import java.util.List;
 import java.util.UUID;
 
-import dev.iyanz.sessentials.SEssentialsPlugin;
-import dev.iyanz.sessentials.scheduler.Schedulers;
 import dev.iyanz.sessentials.util.Msg;
 import dev.iyanz.sessentials.util.Style;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -26,8 +24,11 @@ import org.jetbrains.annotations.NotNull;
  * <p>Only the owner ever opens their own grave: {@link #open} is only reachable via the
  * {@code /grave} command keyed on the sender's own UUID.</p>
  *
- * <p>Folia-safe: the inventory is opened on the viewer's own region thread via
- * {@link Schedulers#entity}.</p>
+ * <p>Folia-safe: {@link #open} already runs on the viewer's own region thread (the
+ * command executor invokes it there), so the inventory is opened inline — the grave
+ * checkout and the {@code openInventory} call are never separated by a tick, which would
+ * otherwise leave the grave drained with no window open if the owner disconnected in the
+ * gap.</p>
  */
 final class GraveMenu implements InventoryHolder {
 
@@ -50,14 +51,15 @@ final class GraveMenu implements InventoryHolder {
     /**
      * Opens {@code player}'s grave, if they have one. The grave's items are checked out
      * of {@code registry} (draining it and flagging the grave as being viewed) and placed
-     * into a freshly sized chest, which is then shown on the player's region thread. If
+     * into a freshly sized chest, which is then shown inline. Because this method already
+     * runs on the player's region thread, the inventory is opened in the same tick as the
+     * checkout, so a disconnect can never leave the grave drained with no window open. If
      * the player has no active grave, they are told so and nothing else happens.
      *
-     * @param plugin   the owning plugin
      * @param player   the grave owner and viewer
      * @param registry the shared grave registry
      */
-    static void open(SEssentialsPlugin plugin, Player player, GraveRegistry registry) {
+    static void open(Player player, GraveRegistry registry) {
         UUID id = player.getUniqueId();
         if (registry.isOpen(id)) {
             Msg.info(player, "Your grave is already open.");
@@ -72,7 +74,10 @@ final class GraveMenu implements InventoryHolder {
         for (int i = 0; i < items.size() && i < menu.inventory.getSize(); i++) {
             menu.inventory.setItem(i, items.get(i));
         }
-        Schedulers.entity(plugin, player, () -> player.openInventory(menu.inventory));
+        // Opened inline: open() is already on the player's region thread, so the checkout
+        // above and this openInventory are not separated by a tick — no window in which the
+        // grave is drained but the GUI never appears (e.g. a disconnect between the two).
+        player.openInventory(menu.inventory);
     }
 
     /**
