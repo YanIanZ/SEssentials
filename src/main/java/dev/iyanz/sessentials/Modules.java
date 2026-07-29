@@ -77,7 +77,11 @@ final class Modules {
                 new dev.iyanz.sessentials.module.cmdwarmup.CmdWarmupModule(),
                 new dev.iyanz.sessentials.module.falldistance.FallDistanceModule(),
                 new dev.iyanz.sessentials.module.counter.CounterModule(),
-                new dev.iyanz.sessentials.module.silentchest.SilentChestModule()
+                new dev.iyanz.sessentials.module.silentchest.SilentChestModule(),
+                new dev.iyanz.sessentials.module.ctext.CTextModule(),
+                new dev.iyanz.sessentials.module.commandspy.CommandSpyModule(),
+                new dev.iyanz.sessentials.module.afkkick.AfkKickModule(),
+                new dev.iyanz.sessentials.module.firstjoin.FirstJoinModule()
         );
     }
 }
