@@ -82,7 +82,15 @@ final class Modules {
                 new dev.iyanz.sessentials.module.commandspy.CommandSpyModule(),
                 new dev.iyanz.sessentials.module.afkkick.AfkKickModule(),
                 new dev.iyanz.sessentials.module.firstjoin.FirstJoinModule(),
-                new dev.iyanz.sessentials.module.emoji.EmojiModule()
+                new dev.iyanz.sessentials.module.emoji.EmojiModule(),
+                new dev.iyanz.sessentials.module.antispam.AntiSpamModule(),
+                new dev.iyanz.sessentials.module.backpack.BackpackModule(),
+                new dev.iyanz.sessentials.module.glow.GlowModule(),
+                new dev.iyanz.sessentials.module.spawner.SpawnerModule(),
+                new dev.iyanz.sessentials.module.vopen.VOpenModule(),
+                new dev.iyanz.sessentials.module.staffchat.StaffChatModule(),
+                new dev.iyanz.sessentials.module.helpop.HelpOpModule(),
+                new dev.iyanz.sessentials.module.note.NoteModule()
         );
     }
 }
