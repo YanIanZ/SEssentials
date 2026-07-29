@@ -90,7 +90,19 @@ final class Modules {
                 new dev.iyanz.sessentials.module.vopen.VOpenModule(),
                 new dev.iyanz.sessentials.module.staffchat.StaffChatModule(),
                 new dev.iyanz.sessentials.module.helpop.HelpOpModule(),
-                new dev.iyanz.sessentials.module.note.NoteModule()
+                new dev.iyanz.sessentials.module.note.NoteModule(),
+                new dev.iyanz.sessentials.module.report.ReportModule(),
+                new dev.iyanz.sessentials.module.trade.TradeModule(),
+                new dev.iyanz.sessentials.module.joinmessages.JoinMessagesModule(),
+                new dev.iyanz.sessentials.module.localchat.LocalChatModule(),
+                new dev.iyanz.sessentials.module.butcher.ButcherModule(),
+                new dev.iyanz.sessentials.module.entities.EntitiesModule(),
+                new dev.iyanz.sessentials.module.clearground.ClearGroundModule(),
+                new dev.iyanz.sessentials.module.coinflip.CoinFlipModule(),
+                new dev.iyanz.sessentials.module.lottery.LotteryModule(),
+                new dev.iyanz.sessentials.module.chestlock.ChestLockModule(),
+                new dev.iyanz.sessentials.module.itemframe.ItemFrameModule(),
+                new dev.iyanz.sessentials.module.grave.GraveModule()
         );
     }
 }
