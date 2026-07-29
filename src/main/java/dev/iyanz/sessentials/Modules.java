@@ -72,7 +72,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.ctellraw.CTellrawModule(),
                 new dev.iyanz.sessentials.module.armoreffects.ArmorEffectsModule(),
                 new dev.iyanz.sessentials.module.elytra.ElytraModule(),
-                new dev.iyanz.sessentials.module.ipinfo.IpInfoModule()
+                new dev.iyanz.sessentials.module.ipinfo.IpInfoModule(),
+                new dev.iyanz.sessentials.module.anvilcost.AnvilCostModule(),
+                new dev.iyanz.sessentials.module.cmdwarmup.CmdWarmupModule(),
+                new dev.iyanz.sessentials.module.falldistance.FallDistanceModule(),
+                new dev.iyanz.sessentials.module.counter.CounterModule(),
+                new dev.iyanz.sessentials.module.silentchest.SilentChestModule()
         );
     }
 }
