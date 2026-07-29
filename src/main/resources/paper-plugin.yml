@@ -1,6 +1,7 @@
 name: SEssentials
 version: 1.0.0
 main: dev.iyanz.sessentials.SEssentialsPlugin
+loader: dev.iyanz.sessentials.SourbyLoader
 api-version: '1.21'
 folia-supported: true
 authors:
