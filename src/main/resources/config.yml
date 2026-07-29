@@ -1,0 +1,6 @@
+# ============================================================================
+#  SEssentials — Sourby Essentials
+# ============================================================================
+
+# Chat prefix for plugin messages (MiniMessage / legacy '&' both accepted).
+prefix: "<gradient:#43C6AC:#4FC3F7><bold>SEssentials</bold></gradient> <dark_gray>» "

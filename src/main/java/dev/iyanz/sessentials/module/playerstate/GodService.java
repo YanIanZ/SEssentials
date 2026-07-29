@@ -1,0 +1,40 @@
+package dev.iyanz.sessentials.module.playerstate;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Tracks which players currently have god mode (damage invulnerability) enabled.
+ *
+ * <p>Backed by a concurrent set: on Folia, the {@code /god} command and the damage
+ * listener that consults it may run on different region threads at the same time.</p>
+ */
+final class GodService {
+
+    private final Set<UUID> godPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * @param playerId the player's unique id
+     * @return {@code true} if that player currently has god mode enabled
+     */
+    boolean isGod(UUID playerId) {
+        return godPlayers.contains(playerId);
+    }
+
+    /**
+     * Toggles god mode for the given player.
+     *
+     * @param playerId the player's unique id
+     * @return the new state: {@code true} if god mode is now enabled, {@code false} if
+     *         it was just disabled
+     */
+    boolean toggle(UUID playerId) {
+        if (godPlayers.add(playerId)) {
+            return true;
+        }
+        godPlayers.remove(playerId);
+        return false;
+    }
+}
