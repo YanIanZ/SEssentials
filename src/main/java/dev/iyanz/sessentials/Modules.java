@@ -104,7 +104,17 @@ final class Modules {
                 new dev.iyanz.sessentials.module.itemframe.ItemFrameModule(),
                 new dev.iyanz.sessentials.module.grave.GraveModule(),
                 new dev.iyanz.sessentials.module.mutechat.MuteChatModule(),
-                new dev.iyanz.sessentials.module.slowmode.SlowModeModule()
+                new dev.iyanz.sessentials.module.slowmode.SlowModeModule(),
+                new dev.iyanz.sessentials.module.ipban.IpBanModule(),
+                new dev.iyanz.sessentials.module.tempfly.TempFlyModule(),
+                new dev.iyanz.sessentials.module.nightvision.NightVisionModule(),
+                new dev.iyanz.sessentials.module.adminbatch.AdminBatchModule(),
+                new dev.iyanz.sessentials.module.title.TitleModule(),
+                new dev.iyanz.sessentials.module.broadcastsound.BroadcastSoundModule(),
+                new dev.iyanz.sessentials.module.kittycannon.KittyCannonModule(),
+                new dev.iyanz.sessentials.module.expbottle.ExpBottleModule(),
+                new dev.iyanz.sessentials.module.vitals.VitalsModule(),
+                new dev.iyanz.sessentials.module.lockdown.LockdownModule()
         );
     }
 }

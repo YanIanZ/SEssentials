@@ -1,21 +1,36 @@
 # ============================================================================
 #  SEssentials — Sourby Essentials
+#  Folia-safe essentials suite. Every value below has a safe default; you only
+#  need to set what you want to change. Text values accept MiniMessage tags
+#  (e.g. <gold>, <gradient:...>) and legacy '&' colour codes.
 # ============================================================================
 
 # Chat prefix for plugin messages (MiniMessage / legacy '&' both accepted).
 prefix: "<gradient:#43C6AC:#4FC3F7><bold>SEssentials</bold></gradient> <dark_gray>» "
 
-# Homes
+# ----------------------------------------------------------------------------
+#  Homes & warps
+# ----------------------------------------------------------------------------
+
+# Homes (/home, /sethome, /homes GUI).
 home:
-  # Default max homes; override per-rank with the permission sessentials.homes.<n>.
+  # Default max homes. Override per-rank with the permission sessentials.homes.<n>
+  # (e.g. sessentials.homes.10 allows ten). The highest matching node wins.
   default-max: 3
 
-# Kits
+# Kits (/kit, /kits GUI).
 kits:
   # Default per-kit cooldown in seconds when a kit doesn't set its own.
   default-cooldown: 3600
 
-# Info commands (/rules, /motd). Lines are MiniMessage.
+# Random teleport (/rtp, in the utility2 module).
+rtp:
+  # Maximum horizontal distance (blocks) from world origin for a random landing.
+  radius: 5000
+
+# ----------------------------------------------------------------------------
+#  Info commands (/rules, /motd). Lines are MiniMessage.
+# ----------------------------------------------------------------------------
 info:
   rules:
     - "<gradient:#43C6AC:#4FC3F7><bold>ꜱᴏᴜʀʙʏᴄʀᴀꜰᴛ ʀᴜʟᴇꜱ</bold></gradient>"
@@ -25,3 +40,206 @@ info:
   motd:
     - "<gradient:#43C6AC:#4FC3F7><bold>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ꜱᴏᴜʀʙʏᴄʀᴀꜰᴛ</bold></gradient>"
     - "<gray>ᴛʏᴘᴇ <#FFD54F>/ʀᴜʟᴇꜱ <gray>ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ."
+
+# ----------------------------------------------------------------------------
+#  Join / leave & first-join
+# ----------------------------------------------------------------------------
+
+# Custom join/quit messages (join-messages module). When enabled, replaces the
+# vanilla messages. Placeholder {player} is substituted with the player name.
+join-messages:
+  enabled: false
+  # Suppress join/quit messages entirely (overrides the strings below).
+  silent: false
+  first-join: "<yellow>Welcome <white>{player}</white> to the server!"
+  join: "<gray>{player} joined."
+  quit: "<gray>{player} left."
+
+# First-join actions (first-join module) — runs once, the first time a player
+# ever joins.
+first-join:
+  enabled: true
+  # Teleport the new player to spawn on first join.
+  teleport-to-spawn: true
+  # Private welcome message shown to the new player ("" = none).
+  welcome: ""
+  # Console commands run once on first join. {player} is substituted.
+  commands: []
+  #  - "give {player} minecraft:bread 16"
+
+# Staff join/leave notifications (notify module) — pings staff with
+# sessentials.notify when players connect/disconnect.
+notify:
+  join-leave: false
+
+# ----------------------------------------------------------------------------
+#  Chat
+# ----------------------------------------------------------------------------
+
+# Chat format rewrite (chat-format module). When enabled, formats every chat
+# line. {player} = name, {message} = message. Leave disabled to let another
+# chat plugin own formatting.
+chat-format:
+  enabled: false
+  format: "<gray>{player}<dark_gray> » <white>{message}"
+
+# Word filter (chat-filter module).
+chat-filter:
+  enabled: true
+  # "censor" replaces the word with asterisks; "block" cancels the whole message.
+  action: censor
+  banned-words: []
+  #  - badword
+
+# Anti-spam (anti-spam module) — rate-limits chat.
+anti-spam:
+  enabled: true
+  # Minimum seconds between two messages from the same player.
+  cooldown-seconds: 2
+  # Also block sending the exact same message twice in a row.
+  block-repeat: true
+
+# Local/proximity chat (local-chat module) — /localchat toggles per-player.
+local-chat:
+  enabled: false
+  # Radius (blocks) a local message reaches.
+  radius: 100
+
+# Colour limits (color-limits module) — restricts who may use colour codes in
+# chat to players with sessentials.color permissions.
+color-limits:
+  enabled: false
+
+# Emoji substitution (emoji module) — replaces :key: tokens in chat with the
+# mapped text/glyph. Requires sessentials.emoji.
+emoji:
+  enabled: true
+  map:
+    shrug: "¯\\_(ツ)_/¯"
+    heart: "❤"
+    star: "★"
+    check: "✔"
+    cross: "✖"
+    arrow: "➜"
+
+# ----------------------------------------------------------------------------
+#  Death & combat
+# ----------------------------------------------------------------------------
+
+# Death messages (deathmessages module).
+deathmessages:
+  enabled: true
+  # Hide all death messages server-wide.
+  hide: false
+
+# Combat tagging (combat module) — blocks teleport/logout while in combat.
+combat:
+  enabled: true
+  # How long (seconds) a player stays combat-tagged after taking/dealing PvP damage.
+  tag-seconds: 15
+
+# HP bar (hpbar module) — shows a target's health in the action bar on hit.
+hpbar:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+#  Economy features
+# ----------------------------------------------------------------------------
+
+# Coinflip gambling (coinflip module).
+coinflip:
+  # Maximum bet per flip.
+  max-bet: 1000000
+
+# Lottery (lottery module).
+lottery:
+  enabled: false
+  # Ticket price (accepts a plain number).
+  ticket-price: "1000"
+  # Seconds between automatic draws.
+  draw-interval-seconds: 3600
+
+# Anvil repair cost (anvil-cost module) — caps or overrides vanilla anvil XP cost.
+anvil-cost:
+  enabled: false
+  # Maximum XP levels an anvil operation may cost (0 = free).
+  max-cost: 0
+
+# ----------------------------------------------------------------------------
+#  Broadcasts
+# ----------------------------------------------------------------------------
+
+# Rotating auto-broadcasts (autobroadcast module).
+autobroadcast:
+  enabled: true
+  # Seconds between broadcasts.
+  interval-seconds: 300
+  messages:
+    - "<gray>Type <#FFD54F>/help</#FFD54F> for commands."
+    - "<gray>Set a home with <#FFD54F>/sethome</#FFD54F>."
+
+# ----------------------------------------------------------------------------
+#  Restrictions & enchanting
+# ----------------------------------------------------------------------------
+
+# Disable-enchant (disable-enchant module) — stops the listed enchantments from
+# being applied at enchant tables/anvils. Use lowercase Minecraft enchant keys.
+disable-enchant:
+  enabled: false
+  blocked: []
+  #  - mending
+  #  - sharpness
+
+# ----------------------------------------------------------------------------
+#  Opt-in advanced sections
+#  (commented out by default — uncomment and fill to activate the feature)
+# ----------------------------------------------------------------------------
+
+# Custom command aliases (customalias module): map a new command to an existing
+# one. {player} is substituted; multiple target commands run in order.
+#aliases:
+#  hub:
+#    - "warp spawn"
+#  discord:
+#    - "tellraw {player} Join us at discord.gg/example"
+
+# Per-command cooldowns & costs (cmdcontrol module). Each key is a command name.
+#command-control:
+#  fly:
+#    cooldown: 30            # seconds between uses
+#    cost: 100.0             # money charged per use (needs Vault)
+#    bypass-permission: "sessentials.cmdcontrol.bypass.fly"
+
+# Command warm-ups (cmdwarmup module) — delay before a command runs; movement
+# cancels it. Each key is a command name; value is seconds.
+#command-warmup:
+#  home: 3
+#  warp: 3
+
+# Timed commands (timedcommands module) — console commands run on a schedule.
+#timed-commands:
+#  daily-restart-warning:
+#    interval-seconds: 3600
+#    commands:
+#      - "broadcast Server restarts nightly at 04:00."
+
+# Playtime rewards (playtimerewards module) — grants a reward every N minutes
+# of playtime.
+#playtime-rewards:
+#  reward-minutes: 60
+#  reward-id: "hourly"
+#  reward-message: "<green>You earned your hourly reward!"
+#  commands:
+#    - "eco give {player} 500"
+
+# Armour effects (armoreffects module) — grant potion effects while wearing a
+# named material in a slot.
+#armor-effects:
+#  boots:
+#    material: LEATHER_BOOTS
+#    effect: SPEED
+#    amplifier: 1
+#  chestplate:
+#    material: ELYTRA
+#    effect: SLOW_FALLING
+#    amplifier: 0
