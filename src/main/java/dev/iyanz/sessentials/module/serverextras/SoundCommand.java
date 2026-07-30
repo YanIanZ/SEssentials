@@ -103,7 +103,11 @@ final class SoundCommand {
                             Player recipient, float volume, float pitch) {
         CommandSender sender = ctx.getSource().getSender();
         String name = StringArgumentType.getString(ctx, "sound");
-        Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(name.toLowerCase(Locale.ROOT)));
+        // NamespacedKey.fromString returns null (never throws) on illegal input — word()
+        // allows chars like '+' that NamespacedKey.minecraft() would reject with an
+        // IllegalArgumentException, surfacing a raw framework error instead of "Unknown sound".
+        NamespacedKey key = NamespacedKey.fromString(name.toLowerCase(Locale.ROOT));
+        Sound sound = key == null ? null : Registry.SOUNDS.get(key);
         if (sound == null) {
             Msg.err(sender, "Unknown sound: " + name);
             return 0;

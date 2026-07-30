@@ -94,18 +94,25 @@ final class SearchCommand {
         Map<String, Integer> counts = new ConcurrentHashMap<>();
         AtomicInteger remaining = new AtomicInteger(targets.size());
         for (Player target : targets) {
-            ScheduledTask hop = Schedulers.entity(plugin, target, () -> {
+            // Complete exactly once per target. The entity scheduler runs EITHER the task
+            // OR the retired callback (never both) when the player leaves — and returns null
+            // if the player is already gone at schedule time. Wire all three paths to the
+            // same completion so a disconnect (even in the ~1-tick scheduling window) can't
+            // stall the countdown and silently drop the report.
+            Runnable complete = () -> {
+                if (remaining.decrementAndGet() == 0) {
+                    report(plugin, sender, material, counts);
+                }
+            };
+            ScheduledTask hop = target.getScheduler().run(plugin, t -> {
                 int held = count(target, material);
                 if (held > 0) {
                     counts.put(target.getName(), held);
                 }
-                if (remaining.decrementAndGet() == 0) {
-                    report(plugin, sender, material, counts);
-                }
-            });
-            // A retired entity never runs its task; count it as holding nothing.
-            if (hop == null && remaining.decrementAndGet() == 0) {
-                report(plugin, sender, material, counts);
+                complete.run();
+            }, complete);
+            if (hop == null) {
+                complete.run();
             }
         }
         return 1;
