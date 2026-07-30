@@ -182,6 +182,13 @@ public final class ManageMenu extends Menu {
             notifyOffline();
             return;
         }
+        // /vanish is self-toggle only, so we dispatch it AS the target — which requires the
+        // target to hold sessentials.vanish. Check first so the button gives the actor a clear
+        // message instead of silently sending a no-permission error to the target.
+        if (!t.hasPermission("sessentials.vanish")) {
+            Msg.err(viewer, t.getName() + " can't be vanished (they lack vanish access).");
+            return;
+        }
         Schedulers.entity(plugin, t, () -> Bukkit.dispatchCommand(t, "vanish"));
     }
 

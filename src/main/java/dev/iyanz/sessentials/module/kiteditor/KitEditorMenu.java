@@ -159,9 +159,13 @@ final class KitEditorMenu extends Menu {
     }
 
     /**
-     * On close without a Save, returns the admin's placed items so cancelling (or pressing
-     * escape) never eats them. After a Save the grid is empty and {@link #saved} is set, so
-     * nothing is returned — the items live only as the stored kit template.
+     * On close without a Save, returns only the items the admin PERSONALLY added, never the
+     * pre-loaded template clones. The grid is seeded with clones of the existing kit's items
+     * (loaded from the store, not taken from the admin); returning those on cancel would hand
+     * the admin a free physical copy of the kit while the stored definition stays intact — an
+     * item-duplication bug. So the return set is the grid contents minus one matching stack per
+     * pre-loaded template entry; only the surplus (the admin's own dragged-in items) is given
+     * back. After a Save the grid is empty and {@link #saved} is set, so nothing is returned.
      */
     @Override
     protected void onClose(InventoryCloseEvent event) {
@@ -169,12 +173,38 @@ final class KitEditorMenu extends Menu {
             return;
         }
         Inventory inv = getInventory();
+
+        // A consumable multiset of the pre-loaded template stacks (never returned).
+        List<ItemStack> template = new ArrayList<>();
+        for (ItemStack seed : initialItems) {
+            if (seed != null && !seed.getType().isAir()) {
+                template.add(seed.clone());
+            }
+        }
+
         List<ItemStack> back = new ArrayList<>();
         for (int slot = 0; slot <= LAST_GRID_SLOT; slot++) {
             ItemStack stack = inv.getItem(slot);
-            if (stack != null && !stack.getType().isAir()) {
-                back.add(stack);
-                inv.setItem(slot, null);
+            inv.setItem(slot, null);
+            if (stack == null || stack.getType().isAir()) {
+                continue;
+            }
+            int surplus = stack.getAmount();
+            // Cancel out amounts that belong to the template so they aren't handed back.
+            for (ItemStack seed : template) {
+                if (surplus <= 0) {
+                    break;
+                }
+                if (seed.getAmount() > 0 && seed.isSimilar(stack)) {
+                    int taken = Math.min(surplus, seed.getAmount());
+                    seed.setAmount(seed.getAmount() - taken);
+                    surplus -= taken;
+                }
+            }
+            if (surplus > 0) {
+                ItemStack give = stack.clone();
+                give.setAmount(surplus);
+                back.add(give);
             }
         }
         if (back.isEmpty()) {
