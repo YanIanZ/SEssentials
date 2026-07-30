@@ -134,7 +134,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.cmiextras.CmiExtrasModule(),
                 new dev.iyanz.sessentials.module.buildtools.BuildToolsModule(),
                 new dev.iyanz.sessentials.module.managegui.ManageGuiModule(),
-                new dev.iyanz.sessentials.module.guiextras.GuiExtrasModule()
+                new dev.iyanz.sessentials.module.guiextras.GuiExtrasModule(),
+                new dev.iyanz.sessentials.module.warpadmin.WarpAdminModule(),
+                new dev.iyanz.sessentials.module.tpmenu.TpMenuModule(),
+                new dev.iyanz.sessentials.module.playerlist.PlayerListModule(),
+                new dev.iyanz.sessentials.module.kiteditor.KitEditorModule(),
+                new dev.iyanz.sessentials.module.nicheextras.NicheExtrasModule()
         );
     }
 }
