@@ -8,6 +8,7 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.iyanz.sessentials.SEssentialsPlugin;
 import dev.iyanz.sessentials.api.EssModule;
 import dev.iyanz.sessentials.scheduler.Schedulers;
+import dev.iyanz.sessentials.util.Lang;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -41,7 +42,8 @@ public final class AdminModule implements EssModule {
                             .then(Commands.literal("essentials").executes(ctx -> runImport(ctx, "essentials"))))
                     .then(Commands.literal("reload").executes(ctx -> {
                         plugin.reloadConfig();
-                        Msg.ok(ctx.getSource().getSender(), "SEssentials config reloaded.");
+                        Lang.reload(plugin);
+                        Msg.raw(ctx.getSource().getSender(), Msg.prefix() + Lang.get("common.reloaded"));
                         return 1;
                     }))
                     .build(), "SEssentials admin");

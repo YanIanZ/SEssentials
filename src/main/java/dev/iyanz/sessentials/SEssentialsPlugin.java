@@ -9,6 +9,7 @@ import dev.iyanz.sessentials.economy.EconomyHook;
 import dev.iyanz.sessentials.gui.MenuListener;
 import dev.iyanz.sessentials.selib.Selib;
 import dev.iyanz.sessentials.store.Stores;
+import dev.iyanz.sessentials.util.Lang;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -32,6 +33,7 @@ public final class SEssentialsPlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         Msg.init(getConfig().getString("prefix", "<gradient:#43C6AC:#4FC3F7><bold>SEssentials</bold></gradient> <dark_gray>» "));
+        Lang.init(this);
 
         this.economy = new EconomyHook();
         this.stores = new Stores(this);

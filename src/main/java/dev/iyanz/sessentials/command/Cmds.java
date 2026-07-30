@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import dev.iyanz.sessentials.util.Lang;
 import dev.iyanz.sessentials.util.Msg;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -39,7 +40,10 @@ public final class Cmds {
         if (ctx.getSource().getSender() instanceof Player p) {
             return p;
         }
-        Msg.err(ctx.getSource().getSender(), "Only players can use this.");
+        // Pulls the shared, admin-customizable wording from messages.yml (common.player-only).
+        // Sent as MiniMessage (via Msg.raw) with the plugin prefix so colour tags in the
+        // customized message are honoured rather than stripped.
+        Msg.raw(ctx.getSource().getSender(), Msg.prefix() + Lang.get("common.player-only"));
         return null;
     }
 

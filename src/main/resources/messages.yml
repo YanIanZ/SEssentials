@@ -1,0 +1,84 @@
+# ============================================================================
+#  SEssentials — messages.yml  (customizable language file)
+#
+#  These are the SHARED, cross-cutting messages that many commands across the
+#  whole suite send: permission errors, "player not found", cooldowns, and so
+#  on. Editing a line here changes that message everywhere it is used, so you
+#  can re-word or re-colour the plugin without touching any code.
+#
+#  Formatting
+#  ----------
+#  Every value supports MiniMessage tags — e.g. <red>, <#FF7B7B>, <bold>,
+#  <gradient:#43C6AC:#4FC3F7> — AND legacy '&' / '§' colour codes such as &c
+#  and &l. You may mix both styles freely; both are understood.
+#  The plugin chat prefix (set in config.yml) is added in front automatically,
+#  so you do not need to repeat it here.
+#
+#  Placeholders
+#  ------------
+#  Curly-brace tokens are replaced with live values when the message is sent.
+#  Each line below documents the tokens it understands. A token you remove is
+#  simply left out, and any token the plugin does not recognise is shown as-is.
+#  Tokens used in this file:
+#    {player} — a player name                {usage}  — the correct usage line
+#    {time}   — a remaining / wait duration  {amount} — a money amount
+#    {input}  — text the player typed        {world}  — a world name
+#
+#  Deleting a key makes the plugin fall back to its built-in wording, so it is
+#  always safe to remove lines you do not want to override.
+# ============================================================================
+
+common:
+  # A player lacks the permission node required for a command or action.
+  no-permission: "<#FF7B7B>You do not have permission to do that."
+
+  # A command that only makes sense for a player was run from the console.
+  player-only: "<#FF7B7B>Run this in-game."
+
+  # A command that only makes sense from the console was run by a player.
+  console-only: "<#FF7B7B>This command can only be run from the console."
+
+  # A named target player is not online. {player} = the name that was given.
+  player-not-found: "<#FF7B7B>{player} is not online."
+
+  # A number argument could not be understood. {input} = what was typed.
+  invalid-number: "<#FF7B7B>'{input}' is not a valid number."
+
+  # A command was used incorrectly. {usage} = how it should be typed.
+  usage: "<#9AA0A6>Usage: <#FFD54F>{usage}"
+
+  # An action is still on cooldown. {time} = how long is left to wait.
+  on-cooldown: "<#FF7B7B>Wait {time} first."
+
+  # A money feature was used but no Vault economy plugin is available.
+  no-economy: "<#FF7B7B>This needs an economy plugin, but none is installed."
+
+  # A player cannot afford something. {amount} = the amount they need.
+  not-enough-money: "<#FF7B7B>You can't afford that — you need {amount}."
+
+  # Confirmation shown after configuration and messages are reloaded.
+  reloaded: "<#8BE28B>SEssentials configuration reloaded."
+
+  # A feature the player tried to use is turned off in the config.
+  disabled: "<#FF7B7B>That feature is currently turned off."
+
+  # Something unexpected failed while handling the command.
+  error: "<#FF7B7B>Something went wrong. Please try again."
+
+  # Generic success acknowledgement for simple actions.
+  saved: "<#8BE28B>Saved."
+
+  # Generic acknowledgement that an action was aborted.
+  cancelled: "<#9AA0A6>Cancelled."
+
+  # A destructive action needs the command to be run a second time.
+  confirm: "<#FFD54F>Run the command again to confirm."
+
+  # A named world does not exist. {world} = the world name that was given.
+  world-not-found: "<#FF7B7B>There is no world named '{world}'."
+
+  # A command needs an item held in the main hand, but the hand is empty.
+  hold-item: "<#FF7B7B>Hold an item in your hand first."
+
+  # A player targeted themselves where that is not allowed.
+  target-self: "<#FF7B7B>You can't target yourself."

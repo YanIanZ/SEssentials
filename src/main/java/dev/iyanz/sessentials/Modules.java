@@ -130,7 +130,11 @@ final class Modules {
                 new dev.iyanz.sessentials.module.attributes.AttributesModule(),
                 new dev.iyanz.sessentials.module.staffextras.StaffExtrasModule(),
                 new dev.iyanz.sessentials.module.serverextras.ServerExtrasModule(),
-                new dev.iyanz.sessentials.module.economyprovider.EconomyProviderModule()
+                new dev.iyanz.sessentials.module.economyprovider.EconomyProviderModule(),
+                new dev.iyanz.sessentials.module.cmiextras.CmiExtrasModule(),
+                new dev.iyanz.sessentials.module.buildtools.BuildToolsModule(),
+                new dev.iyanz.sessentials.module.managegui.ManageGuiModule(),
+                new dev.iyanz.sessentials.module.guiextras.GuiExtrasModule()
         );
     }
 }
