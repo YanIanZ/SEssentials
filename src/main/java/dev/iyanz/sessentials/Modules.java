@@ -140,7 +140,11 @@ final class Modules {
                 new dev.iyanz.sessentials.module.playerlist.PlayerListModule(),
                 new dev.iyanz.sessentials.module.kiteditor.KitEditorModule(),
                 new dev.iyanz.sessentials.module.nicheextras.NicheExtrasModule(),
-                new dev.iyanz.sessentials.module.bedhome.BedHomeModule()
+                new dev.iyanz.sessentials.module.bedhome.BedHomeModule(),
+                new dev.iyanz.sessentials.module.hub.HubModule(),
+                new dev.iyanz.sessentials.module.itembrowser.ItemBrowserModule(),
+                new dev.iyanz.sessentials.module.adminguis.AdminGuisModule(),
+                new dev.iyanz.sessentials.module.itemcmds.ItemCmdsModule()
         );
     }
 }
