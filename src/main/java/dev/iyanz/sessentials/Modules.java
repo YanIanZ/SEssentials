@@ -144,7 +144,11 @@ final class Modules {
                 new dev.iyanz.sessentials.module.hub.HubModule(),
                 new dev.iyanz.sessentials.module.itembrowser.ItemBrowserModule(),
                 new dev.iyanz.sessentials.module.adminguis.AdminGuisModule(),
-                new dev.iyanz.sessentials.module.itemcmds.ItemCmdsModule()
+                new dev.iyanz.sessentials.module.itemcmds.ItemCmdsModule(),
+                new dev.iyanz.sessentials.module.protection.ProtectionModule(),
+                new dev.iyanz.sessentials.module.joinbehavior.JoinBehaviorModule(),
+                new dev.iyanz.sessentials.module.worldbehavior.WorldBehaviorModule(),
+                new dev.iyanz.sessentials.module.elevatorsigns.ElevatorSignsModule()
         );
     }
 }

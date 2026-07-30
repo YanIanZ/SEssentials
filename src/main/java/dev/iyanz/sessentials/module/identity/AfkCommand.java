@@ -45,9 +45,26 @@ public final class AfkCommand {
 
     private static void toggle(AfkService afkService, Player player, String message) {
         boolean nowAfk = afkService.toggle(player.getUniqueId());
+        announce(player, nowAfk, message);
+    }
+
+    /**
+     * Broadcasts an AFK state change to every online player, using the same phrasing and
+     * delivery as the manual {@code /afk} command. Reused by the auto-AFK sweep
+     * ({@link AutoAfk}) so an automatic mark/clear is indistinguishable from a manual one
+     * to other players.
+     *
+     * <p>Adventure messaging is thread-safe, so this may be called from the async idle
+     * sweep or the (potentially async) chat listener as well as a region thread.</p>
+     *
+     * @param subject the player whose AFK state changed
+     * @param nowAfk  {@code true} if they just became AFK, {@code false} if they left AFK
+     * @param message optional reason appended to a "now AFK" line ({@code null}/blank omits it)
+     */
+    static void announce(Player subject, boolean nowAfk, String message) {
         String line = nowAfk
-                ? player.getName() + " is now AFK" + (message != null && !message.isBlank() ? ": " + message : "")
-                : player.getName() + " is no longer AFK";
+                ? subject.getName() + " is now AFK" + (message != null && !message.isBlank() ? ": " + message : "")
+                : subject.getName() + " is no longer AFK";
         for (Player online : Bukkit.getOnlinePlayers()) {
             Msg.info(online, line);
         }

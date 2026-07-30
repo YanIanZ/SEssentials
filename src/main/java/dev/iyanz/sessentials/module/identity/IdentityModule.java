@@ -14,6 +14,8 @@ import dev.iyanz.sessentials.api.EssModule;
  */
 public final class IdentityModule implements EssModule {
 
+    private AutoAfk autoAfk;
+
     @Override
     public String name() {
         return "identity";
@@ -31,5 +33,19 @@ public final class IdentityModule implements EssModule {
         RealnameCommand.register(plugin);
         AfkCommand.register(plugin, afkService);
         SeenCommand.register(plugin);
+
+        // CMI-style auto-AFK on idle: marks/unmarks AFK via the same AfkService + broadcast
+        // as /afk (never kicks — the afkkick module owns kicking). Disabled when
+        // `afk.auto-seconds` is 0.
+        this.autoAfk = new AutoAfk(plugin, afkService);
+        this.autoAfk.start();
+    }
+
+    @Override
+    public void disable(SEssentialsPlugin plugin) {
+        if (autoAfk != null) {
+            autoAfk.stop();
+            autoAfk = null;
+        }
     }
 }

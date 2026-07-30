@@ -84,10 +84,48 @@ first-join:
   commands: []
   #  - "give {player} minecraft:bread 16"
 
+# Every-join behaviours (joinbehavior module) — unlike first-join, these run on
+# EVERY join/quit. All off by default.
+join:
+  # Teleport each joining player to spawn (/setspawn location, or the player's
+  # world spawn if none is set). Distinct from first-join.teleport-to-spawn.
+  teleport-spawn: false
+  # Play a sound to everyone online when a player joins or quits.
+  sound-enabled: false
+  # Minecraft sound registry keys (namespace optional, defaults to minecraft:).
+  join-sound: "entity.player.levelup"
+  quit-sound: "block.note_block.bass"
+
 # Staff join/leave notifications (notify module) — pings staff with
 # sessentials.notify when players connect/disconnect.
 notify:
   join-leave: false
+
+# ----------------------------------------------------------------------------
+#  AFK
+# ----------------------------------------------------------------------------
+
+# Auto-AFK on idle (identity module). After this many seconds with no activity
+# (moving to a new block, chat, commands, interaction) a player is automatically
+# marked AFK — the same "is now AFK" broadcast manual /afk sends — and unmarked
+# again on their next activity. This only marks/unmarks AFK; idle KICKING is the
+# separate afk-kick module's job. Set to 0 to disable auto-AFK (manual /afk still
+# works).
+afk:
+  auto-seconds: 300
+
+# ----------------------------------------------------------------------------
+#  Protection
+# ----------------------------------------------------------------------------
+
+# Passive protection behaviours (protection module).
+protection:
+  # Cancel void damage to players and teleport them to spawn instead
+  # (the /setspawn location, or the world spawn if none is set).
+  void-teleport: true
+  # Cancel natural/patrol phantom spawns (spawn eggs, spawners and
+  # commands still work).
+  no-phantoms: false
 
 # ----------------------------------------------------------------------------
 #  Chat
@@ -163,6 +201,42 @@ hpbar:
 # number pops above an entity when it takes damage.
 damage-indicator:
   enabled: true
+
+# Elevator signs (elevatorsigns module) — right-click a sign whose first line is
+# "[Up]" or "[Down]" (also "[Lift Up]"/"[Lift Down]"; case-insensitive, brackets
+# optional) to jump to the next elevator sign above/below in the same column.
+elevator:
+  enabled: true
+  # Maximum vertical distance (blocks) to search for the destination sign.
+  range: 64
+
+# ----------------------------------------------------------------------------
+#  World & respawn behaviours (worldbehavior module)
+#  Passive, config-driven automations — this module has no commands. Everything
+#  below is off/empty by default, so an untouched config leaves it fully inert.
+# ----------------------------------------------------------------------------
+
+# Force a game mode per world. Each key is a world name (matched case-insensitively)
+# and the value is SURVIVAL, CREATIVE, ADVENTURE or SPECTATOR. The mode is applied
+# when a player joins into that world and whenever they change into it. Unlisted
+# worlds are never touched; an unknown mode name is logged and ignored.
+world-gamemode: {}
+#  hub: ADVENTURE
+#  creative: CREATIVE
+
+world-behavior:
+  # Teleport players to the new world's spawn whenever they change worlds. Prefers
+  # the /setspawn location when it lies in that world, else the world's own spawn.
+  spawn-on-change: false
+
+respawn:
+  # Redirect respawns to the global /setspawn location (only when a spawn is set).
+  # A player's bed / respawn anchor is otherwise left alone. Health and food are
+  # already restored by vanilla on respawn.
+  at-spawn: false
+  # Console commands run each time a player respawns. {player} is substituted.
+  commands: []
+  #  - "give {player} minecraft:torch 8"
 
 # ----------------------------------------------------------------------------
 #  Economy features
