@@ -127,6 +127,29 @@ protection:
   # commands still work).
   no-phantoms: false
 
+# God mode passive behaviours (playerstate module).
+god:
+  # No hunger loss while in god mode.
+  no-hunger: true
+  # God mode persists across relog (re-applied on join).
+  persist: true
+
+# Vanish (moderation module).
+vanish:
+  # Vanish state persists across relog (re-hidden on join).
+  persist: true
+
+# Sit (sit module).
+sit:
+  # Right-click a stair/slab with an empty hand to sit on it.
+  click-to-sit: true
+
+# Teleport cooldown (teleport module). Minimum seconds between a player's own
+# teleports (/tp self, /tpaccept, /back, /spawn). 0 = disabled. Bypass with
+# sessentials.teleport.cooldown.bypass.
+teleport:
+  cooldown-seconds: 0
+
 # ----------------------------------------------------------------------------
 #  Chat
 # ----------------------------------------------------------------------------

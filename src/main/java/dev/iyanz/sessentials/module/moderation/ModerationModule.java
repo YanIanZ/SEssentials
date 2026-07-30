@@ -34,8 +34,11 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  * Moderation commands: kick, ban/tempban/unban, mute/unmute (chat-suppressing), kill,
- * vanish, invsee and endersee. Mutes persist to the {@code moderation} store; vanish
- * is session state. Folia-safe: actions on a target run on the target's region thread.
+ * vanish, invsee and endersee. Mutes persist to the {@code moderation} store; vanish is
+ * session state that, when {@code vanish.persist} is enabled (default), also survives
+ * relog CMI-style: a vanished player's flag is written to the {@code moderation} store on
+ * quit and restored on their next join. Folia-safe: actions on a target run on the
+ * target's region thread.
  */
 @SuppressWarnings({"UnstableApiUsage", "deprecation"})
 public final class ModerationModule implements EssModule, Listener {
@@ -44,6 +47,18 @@ public final class ModerationModule implements EssModule, Listener {
 
     /** Map sentinel for a permanent mute (never expires). The store persists {@code 0}. */
     private static final long PERMANENT = Long.MAX_VALUE;
+
+    /**
+     * Permission that lets a player see vanished players (and thus not have vanished
+     * players hidden from them). Matches the {@code /vanish} command permission.
+     */
+    private static final String SEE_VANISHED_PERM = "sessentials.vanish";
+
+    /** Config key gating relog-persistence of vanish (default {@code true}). */
+    private static final String VANISH_PERSIST_KEY = "vanish.persist";
+
+    /** Store path prefix under which each vanished player's flag is written. */
+    private static final String VANISHED_STORE_PREFIX = "vanished.";
 
     private SEssentialsPlugin plugin;
     private YamlStore store;
@@ -241,18 +256,25 @@ public final class ModerationModule implements EssModule, Listener {
     }
 
     private void toggleVanish(Player p) {
-        if (vanished.remove(p.getUniqueId())) {
+        UUID id = p.getUniqueId();
+        if (vanished.remove(id)) {
+            // Turning OFF: drop the session flag AND any persisted flag so a later relog
+            // does not silently re-vanish the player.
+            if (store.contains(VANISHED_STORE_PREFIX + id)) {
+                store.remove(VANISHED_STORE_PREFIX + id);
+                store.save();
+            }
             for (Player other : Bukkit.getOnlinePlayers()) {
                 // Visibility must be mutated on the OTHER player's region thread (Folia).
                 Schedulers.entity(plugin, other, () -> other.showPlayer(plugin, p));
             }
             Msg.ok(p, "You are now visible.");
         } else {
-            vanished.add(p.getUniqueId());
+            vanished.add(id);
             for (Player other : Bukkit.getOnlinePlayers()) {
                 // Visibility must be mutated on the OTHER player's region thread (Folia).
                 Schedulers.entity(plugin, other, () -> {
-                    if (!other.hasPermission("sessentials.vanish")) {
+                    if (!other.hasPermission(SEE_VANISHED_PERM)) {
                         other.hidePlayer(plugin, p);
                     }
                 });
@@ -331,21 +353,55 @@ public final class ModerationModule implements EssModule, Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        // Prevent the session-state vanished set from leaking UUIDs of gone players.
-        vanished.remove(event.getPlayer().getUniqueId());
+        UUID id = event.getPlayer().getUniqueId();
+        // Drop the UUID from the session set so it never leaks a gone player, but first
+        // persist the flag (CMI-style) so the player re-vanishes on their next join.
+        boolean wasVanished = vanished.remove(id);
+        if (wasVanished && vanishPersist()) {
+            store.set(VANISHED_STORE_PREFIX + id, true);
+            store.save();
+        }
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player joiner = event.getPlayer();
-        if (joiner.hasPermission("sessentials.vanish")) {
+        UUID joinerId = joiner.getUniqueId();
+
+        // 1) Restore persisted vanish: if this joiner was vanished at their last quit,
+        //    re-add to the session set and re-hide them from everyone who cannot see
+        //    vanished players. Runs regardless of the joiner's current permission (the
+        //    stored flag is the source of truth), so it must precede the early return.
+        if (vanishPersist() && store.contains(VANISHED_STORE_PREFIX + joinerId)) {
+            vanished.add(joinerId);
+            for (Player other : Bukkit.getOnlinePlayers()) {
+                if (other.equals(joiner)) {
+                    continue;
+                }
+                // Visibility must be mutated on the OTHER player's region thread (Folia).
+                Schedulers.entity(plugin, other, () -> {
+                    if (!other.hasPermission(SEE_VANISHED_PERM)) {
+                        other.hidePlayer(plugin, joiner);
+                    }
+                });
+            }
+        }
+
+        // 2) Existing behaviour: hide already-vanished players FROM this joiner, unless
+        //    the joiner is allowed to see them.
+        if (joiner.hasPermission(SEE_VANISHED_PERM)) {
             return;
         }
         for (UUID id : vanished) {
             Player v = Bukkit.getPlayer(id);
-            if (v != null) {
+            if (v != null && !v.equals(joiner)) {
                 joiner.hidePlayer(plugin, v);
             }
         }
+    }
+
+    /** @return whether vanish state should persist across relog ({@code vanish.persist}). */
+    private boolean vanishPersist() {
+        return plugin.getConfig().getBoolean(VANISH_PERSIST_KEY, true);
     }
 }

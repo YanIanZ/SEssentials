@@ -17,17 +17,19 @@ import org.bukkit.event.player.PlayerTeleportEvent;
  * Folia-safe without any extra scheduler hop.
  *
  * <p>Also cleans up per-player teleport state on disconnect — the {@code /back}
- * history entry and any pending {@code /tpa}/{@code /tpahere} request — so neither map
- * grows without bound.</p>
+ * history entry, any pending {@code /tpa}/{@code /tpahere} request and the
+ * {@link TeleportCooldown} stamp — so none of the maps grow without bound.</p>
  */
 final class TeleportHistoryListener implements Listener {
 
     private final TeleportHistory history;
     private final TeleportRequests requests;
+    private final TeleportCooldown cooldown;
 
-    TeleportHistoryListener(TeleportHistory history, TeleportRequests requests) {
+    TeleportHistoryListener(TeleportHistory history, TeleportRequests requests, TeleportCooldown cooldown) {
         this.history = history;
         this.requests = requests;
+        this.cooldown = cooldown;
     }
 
     /** Remembers the pre-teleport location so a later {@code /back} can return here. */
@@ -45,11 +47,12 @@ final class TeleportHistoryListener implements Listener {
         history.remember(player.getUniqueId(), player.getLocation());
     }
 
-    /** Drops the quitting player's {@code /back} history and any pending teleport request. */
+    /** Drops the quitting player's {@code /back} history, pending request and cooldown stamp. */
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
         history.remove(playerId);
         requests.removePlayer(playerId);
+        cooldown.remove(playerId);
     }
 }

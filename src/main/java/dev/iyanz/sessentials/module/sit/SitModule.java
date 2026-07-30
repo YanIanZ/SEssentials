@@ -11,11 +11,14 @@ import org.bukkit.entity.Player;
 
 /**
  * Seating and riding module: {@code /sit} seats the player on an invisible marker
- * armor stand where they stand, {@code /ride} mounts the player on the entity they
- * are looking at, and {@code /shakeitoff} ejects everyone riding the player.
+ * armor stand where they stand, right-clicking a stair or slab with an empty hand
+ * sits the player on that block (click-to-sit, gated on the {@code sit.click-to-sit}
+ * config key, default on), {@code /ride} mounts the player on the entity they are
+ * looking at, and {@code /shakeitoff} ejects everyone riding the player.
  *
  * <p>Seat entities are owned by {@link SitSeats} and removed again by
- * {@link SitListener} the moment the player dismounts or disconnects.</p>
+ * {@link SitListener} the moment the player dismounts or disconnects; click-to-sit
+ * seats share the same registry, so the same cleanup covers them.</p>
  *
  * <p>Folia-safe: every entity spawn, mount, and removal runs on the owning entity's
  * region thread. The command executors themselves already run on the sender's region

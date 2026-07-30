@@ -14,6 +14,10 @@ import org.bukkit.entity.Player;
  * <p>Every teleport goes through {@link Player#teleportAsync}, and any read of another
  * player's location happens on that player's own region thread (see
  * {@link Teleports}), so the whole module is Folia-safe.</p>
+ *
+ * <p>The player-initiated teleports ({@code /tp} self-move, {@code /tpaccept},
+ * {@code /back}, {@code /spawn}) share a post-teleport cooldown gate
+ * ({@link TeleportCooldown}, configured by {@code teleport.cooldown-seconds}).</p>
  */
 public final class TeleportModule implements EssModule {
 
@@ -27,11 +31,12 @@ public final class TeleportModule implements EssModule {
 
     @Override
     public void enable(SEssentialsPlugin plugin) {
-        plugin.getServer().getPluginManager().registerEvents(new TeleportHistoryListener(history, requests), plugin);
+        TeleportCooldown cooldown = new TeleportCooldown(plugin);
+        plugin.getServer().getPluginManager().registerEvents(new TeleportHistoryListener(history, requests, cooldown), plugin);
 
-        TeleportCommands.register(plugin);
-        TeleportRequestCommands.register(plugin, requests);
-        BackCommand.register(plugin, history);
-        SpawnCommands.register(plugin);
+        TeleportCommands.register(plugin, cooldown);
+        TeleportRequestCommands.register(plugin, requests, cooldown);
+        BackCommand.register(plugin, history, cooldown);
+        SpawnCommands.register(plugin, cooldown);
     }
 }

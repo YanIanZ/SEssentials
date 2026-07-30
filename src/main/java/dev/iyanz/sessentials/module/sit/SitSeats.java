@@ -8,12 +8,14 @@ import dev.iyanz.sessentials.scheduler.Schedulers;
 import dev.iyanz.sessentials.util.Msg;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 /**
- * Owns the invisible seat entities created by {@code /sit} and their lifecycle.
+ * Owns the invisible seat entities created by {@code /sit} and by right-clicking a
+ * stair or slab (click-to-sit), and their lifecycle.
  *
  * <p>A seat is a marker {@link ArmorStand} (invisible, no gravity, no hitbox) spawned
  * just below the player's feet; the player is mounted on it as a passenger. Active
@@ -31,8 +33,24 @@ final class SitSeats {
     /** How far below the player's feet the seat marker spawns, in blocks. */
     private static final double SEAT_DROP = 0.2;
 
+    /**
+     * How far above a clicked block's base the seat marker spawns, in blocks. A
+     * bottom-half stair or slab surface sits at +0.5; a player standing on it would
+     * have the {@code /sit} stand at +0.5 &minus; {@link #SEAT_DROP} = +0.3, so this
+     * value makes click-to-sit look identical to {@code /sit} on the same block.
+     */
+    private static final double BLOCK_SEAT_RISE = 0.3;
+
     /** Active seats: seated player id to seat armor-stand id. */
     private final ConcurrentHashMap<UUID, UUID> seats = new ConcurrentHashMap<>();
+
+    /**
+     * @param playerId the player to look up
+     * @return whether that player currently has a tracked seat
+     */
+    boolean isSeated(UUID playerId) {
+        return seats.containsKey(playerId);
+    }
 
     /**
      * Seats {@code player} where they stand. Validates that the player is not already
@@ -55,7 +73,23 @@ final class SitSeats {
             Msg.err(player, "You cannot sit while flying.");
             return;
         }
-        Schedulers.entity(plugin, player, () -> spawnSeat(player));
+        Schedulers.entity(plugin, player,
+                () -> spawnSeat(player, player.getLocation().subtract(0.0, SEAT_DROP, 0.0)));
+    }
+
+    /**
+     * Seats {@code player} centered on {@code block} (click-to-sit on a stair or slab).
+     * Must be called on the player's own region thread — {@code PlayerInteractEvent}
+     * already fires there, so the seat is spawned and mounted directly with no extra
+     * scheduler hop. All guards are re-checked by {@link #spawnSeat(Player, Location)};
+     * the resulting seat lives in the same registry as {@code /sit} seats, so the
+     * existing dismount and quit cleanup applies unchanged.
+     *
+     * @param player the player to seat
+     * @param block  the stair or slab block to sit on
+     */
+    void seatOnBlock(Player player, Block block) {
+        spawnSeat(player, block.getLocation().add(0.5, BLOCK_SEAT_RISE, 0.5));
     }
 
     /**
@@ -63,13 +97,13 @@ final class SitSeats {
      * re-checks the guards because the player may have moved on (quit, mounted
      * something, or issued {@code /sit} twice) between the command and this tick.
      *
-     * @param player the player to seat
+     * @param player       the player to seat
+     * @param seatLocation where the seat marker stand spawns
      */
-    private void spawnSeat(Player player) {
+    private void spawnSeat(Player player, Location seatLocation) {
         if (!player.isValid() || player.isInsideVehicle() || seats.containsKey(player.getUniqueId())) {
             return;
         }
-        Location seatLocation = player.getLocation().subtract(0.0, SEAT_DROP, 0.0);
         ArmorStand seat = player.getWorld().spawn(seatLocation, ArmorStand.class, stand -> {
             stand.setInvisible(true);
             stand.setMarker(true);

@@ -30,7 +30,11 @@ public final class PlayerStateModule implements EssModule {
     @Override
     public void enable(SEssentialsPlugin plugin) {
         plugin.getServer().getPluginManager().registerEvents(new GodDamageListener(godService), plugin);
-        plugin.getServer().getPluginManager().registerEvents(new GodQuitListener(godService), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new GodQuitListener(plugin, godService), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new GodJoinListener(plugin, godService), plugin);
+        if (plugin.getConfig().getBoolean("god.no-hunger", true)) {
+            plugin.getServer().getPluginManager().registerEvents(new GodHungerListener(godService), plugin);
+        }
 
         plugin.commands(reg -> {
             VitalityCommands.register(reg, plugin, godService);

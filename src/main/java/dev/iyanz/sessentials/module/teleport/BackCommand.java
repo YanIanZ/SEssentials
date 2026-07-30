@@ -22,10 +22,11 @@ final class BackCommand {
     /**
      * Registers the {@code /back} command.
      *
-     * @param plugin  the owning plugin
-     * @param history the shared teleport-history store
+     * @param plugin   the owning plugin
+     * @param history  the shared teleport-history store
+     * @param cooldown the shared teleport-cooldown gate
      */
-    static void register(SEssentialsPlugin plugin, TeleportHistory history) {
+    static void register(SEssentialsPlugin plugin, TeleportHistory history, TeleportCooldown cooldown) {
         plugin.commands(reg -> reg.register(
                 Commands.literal("back")
                         .requires(s -> s.getSender().hasPermission("sessentials.back"))
@@ -33,6 +34,9 @@ final class BackCommand {
                             Location location = history.get(player.getUniqueId());
                             if (location == null) {
                                 Msg.err(player, "You have no previous location to return to.");
+                                return;
+                            }
+                            if (!cooldown.tryPass(player)) {
                                 return;
                             }
                             player.teleportAsync(location, TeleportCause.COMMAND);

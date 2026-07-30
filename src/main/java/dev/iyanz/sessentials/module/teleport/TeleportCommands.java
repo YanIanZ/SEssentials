@@ -26,11 +26,12 @@ final class TeleportCommands {
     /**
      * Registers all direct-teleport commands.
      *
-     * @param plugin the owning plugin
+     * @param plugin   the owning plugin
+     * @param cooldown the shared teleport-cooldown gate (applies to {@code /tp} self-move only)
      */
-    static void register(SEssentialsPlugin plugin) {
+    static void register(SEssentialsPlugin plugin, TeleportCooldown cooldown) {
         plugin.commands(reg -> {
-            reg.register(buildTp(plugin), "Teleport to a player, or teleport a player to another player");
+            reg.register(buildTp(plugin, cooldown), "Teleport to a player, or teleport a player to another player");
             reg.register(buildTpHere(plugin), "Bring a player to you");
             reg.register(buildTpAll(plugin), "Teleport every online player to you");
             reg.register(buildTpPos(), "Teleport to exact coordinates in your world");
@@ -38,7 +39,8 @@ final class TeleportCommands {
         });
     }
 
-    private static com.mojang.brigadier.tree.LiteralCommandNode<io.papermc.paper.command.brigadier.CommandSourceStack> buildTp(SEssentialsPlugin plugin) {
+    private static com.mojang.brigadier.tree.LiteralCommandNode<io.papermc.paper.command.brigadier.CommandSourceStack> buildTp(
+            SEssentialsPlugin plugin, TeleportCooldown cooldown) {
         return Commands.literal("tp")
                 .requires(s -> s.getSender().hasPermission("sessentials.tp"))
                 .then(Commands.argument("target", StringArgumentType.word()).suggests(Cmds.PLAYERS)
@@ -56,6 +58,9 @@ final class TeleportCommands {
                             }
                             if (target.equals(sender)) {
                                 Msg.err(sender, "You are already there.");
+                                return 0;
+                            }
+                            if (!cooldown.tryPass(sender)) {
                                 return 0;
                             }
                             Msg.ok(sender, "Teleporting to " + target.getName() + "...");

@@ -39,6 +39,16 @@ final class GodService {
     }
 
     /**
+     * Enables god mode for the given player, idempotently. Used to restore god mode for a
+     * player whose flag was persisted across a relog (see {@link GodJoinListener}).
+     *
+     * @param playerId the player's unique id
+     */
+    void add(UUID playerId) {
+        godPlayers.add(playerId);
+    }
+
+    /**
      * Disables god mode for the given player, keeping the registry bounded when a player
      * disconnects. A no-op if the player was not in god mode.
      *

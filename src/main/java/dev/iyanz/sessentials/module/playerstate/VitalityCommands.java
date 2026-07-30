@@ -44,7 +44,7 @@ final class VitalityCommands {
 
         reg.register(
                 CommandBuilders.selfOrTarget("god", "sessentials.god", "sessentials.god.others", plugin,
-                        (sender, player) -> toggleGod(sender, player, godService)),
+                        (sender, player) -> toggleGod(sender, player, godService, plugin)),
                 "Toggle invulnerability for yourself or a player");
 
         reg.register(
@@ -79,12 +79,19 @@ final class VitalityCommands {
         }
     }
 
-    private static void toggleGod(CommandSender sender, Player player, GodService godService) {
+    private static void toggleGod(CommandSender sender, Player player, GodService godService, SEssentialsPlugin plugin) {
         boolean enabled = godService.toggle(player.getUniqueId());
         if (enabled) {
             Msg.ok(player, "God mode enabled.");
         } else {
             Msg.info(player, "God mode disabled.");
+            // Clear both the runtime set (done by toggle above) and the persisted flag, and
+            // drop the vanilla invulnerability flag a persisted-god restore may have set on
+            // join, so /god off fully takes effect and never comes back on relog.
+            player.setInvulnerable(false);
+            if (GodPersistence.enabled(plugin)) {
+                GodPersistence.clear(plugin, player.getUniqueId());
+            }
         }
         if (sender != player) {
             Msg.ok(sender, player.getName() + "'s god mode is now " + (enabled ? "on" : "off") + ".");

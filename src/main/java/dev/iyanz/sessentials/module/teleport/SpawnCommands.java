@@ -25,13 +25,17 @@ final class SpawnCommands {
     /**
      * Registers the {@code /spawn} and {@code /setspawn} commands.
      *
-     * @param plugin the owning plugin
+     * @param plugin   the owning plugin
+     * @param cooldown the shared teleport-cooldown gate (applies to {@code /spawn} only)
      */
-    static void register(SEssentialsPlugin plugin) {
+    static void register(SEssentialsPlugin plugin, TeleportCooldown cooldown) {
         plugin.commands(reg -> {
             reg.register(Commands.literal("spawn")
                     .requires(s -> s.getSender().hasPermission("sessentials.spawn"))
                     .executes(Cmds.playerExec(player -> {
+                        if (!cooldown.tryPass(player)) {
+                            return;
+                        }
                         YamlStore store = plugin.stores().get(STORE_NAME);
                         Location spawn = store.getLocation(PATH);
                         if (spawn == null) {

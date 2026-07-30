@@ -27,12 +27,14 @@ final class TeleportRequestCommands {
      *
      * @param plugin   the owning plugin
      * @param requests the shared pending-request registry
+     * @param cooldown the shared teleport-cooldown gate (applied to the player who moves
+     *                 when a request is accepted)
      */
-    static void register(SEssentialsPlugin plugin, TeleportRequests requests) {
+    static void register(SEssentialsPlugin plugin, TeleportRequests requests, TeleportCooldown cooldown) {
         plugin.commands(reg -> {
             reg.register(buildTpa(plugin, requests), "Request to teleport to a player");
             reg.register(buildTpaHere(plugin, requests), "Request that a player teleport to you");
-            reg.register(buildTpAccept(plugin, requests), "Accept the pending teleport request", List.of("tpyes"));
+            reg.register(buildTpAccept(plugin, requests, cooldown), "Accept the pending teleport request", List.of("tpyes"));
             reg.register(buildTpDeny(plugin, requests), "Deny the pending teleport request", List.of("tpno"));
         });
     }
@@ -96,7 +98,7 @@ final class TeleportRequestCommands {
     }
 
     private static com.mojang.brigadier.tree.LiteralCommandNode<io.papermc.paper.command.brigadier.CommandSourceStack> buildTpAccept(
-            SEssentialsPlugin plugin, TeleportRequests requests) {
+            SEssentialsPlugin plugin, TeleportRequests requests, TeleportCooldown cooldown) {
         return Commands.literal("tpaccept")
                 .requires(s -> s.getSender().hasPermission("sessentials.tpaccept"))
                 .executes(Cmds.playerExec(target -> {
@@ -110,13 +112,30 @@ final class TeleportRequestCommands {
                         Msg.err(target, "That player is no longer online.");
                         return;
                     }
-                    Msg.ok(target, "Accepted " + requester.getName() + "'s teleport request.");
+                    // The cooldown gates whoever actually moves, checked on that
+                    // player's own region thread.
                     switch (req.kind()) {
-                        case TO_TARGET -> Teleports.moveToPlayer(plugin, requester, target);
-                        case TARGET_TO_REQUESTER -> Teleports.moveToPlayer(plugin, target, requester);
+                        case TO_TARGET -> Schedulers.entity(plugin, requester, () -> {
+                            if (!cooldown.tryPass(requester)) {
+                                Schedulers.entity(plugin, target, () -> Msg.err(target,
+                                        requester.getName() + " must wait before teleporting again."));
+                                return;
+                            }
+                            Schedulers.entity(plugin, target, () -> Msg.ok(target,
+                                    "Accepted " + requester.getName() + "'s teleport request."));
+                            Teleports.moveToPlayer(plugin, requester, target);
+                            Msg.ok(requester, target.getName() + " accepted your teleport request.");
+                        });
+                        case TARGET_TO_REQUESTER -> {
+                            if (!cooldown.tryPass(target)) {
+                                return;
+                            }
+                            Msg.ok(target, "Accepted " + requester.getName() + "'s teleport request.");
+                            Teleports.moveToPlayer(plugin, target, requester);
+                            Schedulers.entity(plugin, requester, () ->
+                                    Msg.ok(requester, target.getName() + " accepted your teleport request."));
+                        }
                     }
-                    Schedulers.entity(plugin, requester, () ->
-                            Msg.ok(requester, target.getName() + " accepted your teleport request."));
                 }))
                 .build();
     }
