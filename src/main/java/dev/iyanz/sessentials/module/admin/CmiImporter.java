@@ -241,6 +241,11 @@ final class CmiImporter {
             return false;
         }
         importLog.set(marker, "cmi:" + amount);
+        // Persist the marker durably RIGHT AFTER the deposit, not just at end of run():
+        // if the loop aborts mid-way (e.g. SQLITE_BUSY because CMI holds the db) and the
+        // server restarts, an in-memory-only marker would be lost and a re-run would
+        // double-deposit this player's balance.
+        importLog.save();
         return true;
     }
 

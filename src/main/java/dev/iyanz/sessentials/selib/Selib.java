@@ -19,22 +19,20 @@ public final class Selib {
     /** Library version. */
     public static final String VERSION = "1.0";
 
-    private static boolean initialized;
-
     private Selib() {
     }
 
     /**
-     * Registers SELIB's shared listeners with the server, idempotently. Safe to call more than
-     * once; only the first call registers anything.
+     * Registers SELIB's shared listeners with the server. Call once from the plugin's
+     * {@code onEnable}. No static "already initialized" guard: Bukkit unregisters a plugin's
+     * listeners on disable via its {@link org.bukkit.event.HandlerList}, so a disable→enable
+     * cycle (e.g. a plugin manager reload, same classloader) must re-register the SELIB menu
+     * listener — a static guard would suppress that and leave every SELIB menu without click
+     * routing after a reload.
      *
      * @param plugin the owning plugin
      */
     public static void init(SEssentialsPlugin plugin) {
-        if (initialized) {
-            return;
-        }
         plugin.getServer().getPluginManager().registerEvents(new MenuListener(), plugin);
-        initialized = true;
     }
 }

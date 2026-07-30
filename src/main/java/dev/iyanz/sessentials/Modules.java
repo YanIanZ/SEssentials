@@ -119,7 +119,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.damageindicator.DamageIndicatorModule(),
                 new dev.iyanz.sessentials.module.repairall.RepairAllModule(),
                 new dev.iyanz.sessentials.module.burn.BurnModule(),
-                new dev.iyanz.sessentials.module.fireball.FireballModule()
+                new dev.iyanz.sessentials.module.fireball.FireballModule(),
+                new dev.iyanz.sessentials.module.craft.CraftModule(),
+                new dev.iyanz.sessentials.module.sendspawn.SendSpawnModule(),
+                new dev.iyanz.sessentials.module.healall.HealAllModule(),
+                new dev.iyanz.sessentials.module.feedall.FeedAllModule(),
+                new dev.iyanz.sessentials.module.smite.SmiteModule()
         );
     }
 }

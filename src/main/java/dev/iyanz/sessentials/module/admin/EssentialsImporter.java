@@ -166,6 +166,9 @@ final class EssentialsImporter {
             return false;
         }
         importLog.set(marker, "essentials:" + amount);
+        // Persist the marker durably per deposit (not just at end of run): a crash mid-loop
+        // must not lose a deposit's marker, or a re-import would double-credit the balance.
+        importLog.save();
         return true;
     }
 
