@@ -7,15 +7,18 @@ proprietary plugin.
 
 - **Paper 1.21.9 · Java 25 · Gradle KTS · Shadow 9.6.1**
 - **`folia-supported: true`** — teleports use `teleportAsync`, all entity/world work hops
-  to the owning region thread, and there is no legacy `Bukkit.getScheduler()` anywhere.
+  to the owning region thread (world time/weather/gamerules on the **global** region
+  thread), and there is no legacy `Bukkit.getScheduler()` anywhere.
 - **Standalone** — needs no external library plugin. Vault and PlaceholderAPI are
-  *optional* soft-hooks (`compileOnly`); the SQLite driver used by the CMI importer is
-  bundled and relocated.
-- **101 self-contained modules**, ~285 commands. Each module lives in its own package and
-  registers its own Brigadier commands + listeners in `enable(plugin)`.
+  *optional* soft-hooks. The one runtime library (the SQLite JDBC driver used by the CMI
+  importer) is fetched from Maven at startup by a Paper `PluginLoader` (`SourbyLoader`)
+  instead of shaded, keeping the jar **under 1 MB**.
+- **115 self-contained modules**, ~390 command literals. Each module lives in its own
+  package and registers its own Brigadier commands + listeners in `enable(plugin)`.
+- **Per-module toggles** — disable any module with `modules.<name>: false` in `config.yml`.
 
-> Deliberately **excludes** `ping` and the tab list (handled elsewhere), and the
-> standalone `tps` command.
+> Deliberately **excludes** `ping`, the tab list, and the standalone `tps` command
+> (handled elsewhere / out of scope).
 
 ---
 
@@ -30,10 +33,13 @@ Commands below are representative — most have aliases and `.others` target var
 `rtp` · `up`/`down`/`jump` · `elytra` · `tempfly`.
 
 ### Player state, vitals & items
-`heal` · `feed` · `god` · `extinguish` · `suicide` · `fly` · `speed` · `gamemode`/`gm` ·
-`hat` · `repair` · `enderchest` · virtual `workbench`/`anvil`/`grindstone`/`cartography`/
-`loom`/`smithingtable`/`stonecutter` · `give`/`more`/`enchant`/`rename`/`lore`/`condense` ·
-item `nbt` tools · `backpack` · `savedinv` · `invtools` (openshulker/sort/stack).
+`heal`/`healall` · `feed`/`feedall` · `god` · `extinguish` · `suicide` · `fly` · `speed` ·
+`gamemode`/`gm` · `hat` · `repair`/`repairall` · `enderchest` · `craft` + virtual
+`workbench`/`anvil`/`grindstone`/`cartography`/`loom`/`smithingtable`/`stonecutter` ·
+`sit`/`ride`/`shakeitoff` · attribute setters `hunger`/`saturation`/`air`/`maxhp`/`scale` ·
+`give`/`more`/`enchant`/`rename`/`lore`/`condense` · item `nbt` tools + item-admin
+`hideflags`/`unbreakable`/`itemcmdata`/`trim`/`mobhead` · `backpack` · `savedinv` ·
+`invtools` (openshulker/sort/stack).
 
 ### Economy
 `balance`/`pay`/`baltop`/`eco` (Vault-hooked; amounts accept `1k`/`1.5m`/`2b`) ·
@@ -46,11 +52,13 @@ item `nbt` tools · `backpack` · `savedinv` · `invtools` (openshulker/sort/sta
 custom `chatformat`, join/quit & death message control, `firstjoin` actions.
 
 ### Moderation & admin
-`kick`/`ban`/`tempban`/`unban` · `mute`/`unmute` · `ipban`/`ipbanlist` · `jail`/`unjail` ·
-`warn`/`warnings` · `freeze`/`cuff` + combat-tagging · `vanish` · `commandspy` ·
-editable **invsee** GUI (view + force-take another player's inventory & armour) ·
-`lockdown`/`kickall` · `sudo`/`batch` · `inspect` (whois/blockinfo/checkperm/…) ·
-`import` from CMI or EssentialsX.
+`kick`/`ban`/`tempban`/`unban` · `mute`/`unmute`/`shadowmute` · `ipban`/`ipbanlist` ·
+`jail`/`unjail` · `warn`/`warnings` · `freeze`/`cuff` + combat-tagging · `vanish` ·
+`notarget` · `commandspy` · `search` (item scan) · `patrol` · editable **invsee**/**endersee**
+GUIs (view + force-take another player's inventory/ender chest & armour) ·
+`lockdown`/`kickall` · `sudo`/`batch` · `giveall` · `sendspawn` · `viewdistance` ·
+`maxplayers` · `inspect` (whois/blockinfo/checkperm/…) · `import` from CMI or EssentialsX
+(homes, warps, balances, nicknames).
 
 ### Worlds & building
 `worlds` (create/load/tp/setspawn) · `worldtime`/`ptime`/`pweather` · `worldtools`
@@ -59,16 +67,17 @@ region select) · action **signs** · custom **recipes** · `spawner` · `entiti
 `clearground` · `itemframe` · `chestlock` · `silentchest` · `disableenchant`.
 
 ### Fun & cosmetics
-`fun` (effect/firework/dye/skull/book) · `glow` · `kittycannon` · `expbottle` ·
-`nightvision` · `painting` · `armorstand` editor · `title`/`titleall` · `broadcastsound` ·
-`hpbar`.
+`fun` (effect/firework/dye/skull/book) · `glow` · `kittycannon` · `expbottle` · `fireball` ·
+`burn` · `smite` · `nightvision` · `painting` · `armorstand` editor · `title`/`titleall` ·
+`broadcastsound` · `sound` · `hpbar` · **damage indicator** (floating damage numbers).
 
 ### Utility & meta
-`playtime`/`playtimerewards` · `scavenger` (keep-inv toggle) · `stats` · `counter` ·
-`kits` (per-kit cooldown + permission) · PlaceholderAPI `%sessentials_*%` · `customalias` ·
-`cmdcontrol` (per-command cooldown/cost) · `cmdwarmup` · `timedcommands` ·
-`attachedcommands` · `armoreffects` · `afkkick` · `playeroptions` · `vopen` (virtual
-enchant/brewing/furnace/hopper) · dupe-safe player-to-player `trade` · in-memory `grave`.
+`playtime`/`playtimerewards`/`playtimetop` · `scavenger` (keep-inv toggle) · `stats` ·
+`counter` · `kits` (per-kit cooldown + permission) · GUI hub `menus` (`gmmenu`/`ptimemenu`/
+`helpmenu`) · PlaceholderAPI `%sessentials_*%` · `customalias` · `cmdcontrol` (per-command
+cooldown/cost) · `cmdwarmup` · `timedcommands` · `attachedcommands` · `armoreffects` ·
+`afkkick` · `playeroptions` · `vopen` (virtual enchant/brewing/furnace/hopper) · dupe-safe
+player-to-player `trade` · in-memory `grave`.
 
 ---
 
@@ -119,10 +128,13 @@ The whole suite has been through a module-by-module audit. Notable guarantees:
 
 ## Data import
 
-`/sess import cmi` reads a server's own `plugins/CMI/cmi.sqlite.db` (homes) and
-`/sess import essentials` reads EssentialsX `userdata/` + `warps/` — into SEssentials'
-stores, never overwriting existing data. (These read other plugins' **data files**;
-SEssentials contains none of their code.)
+`/sess import cmi` reads a server's own `plugins/CMI/cmi.sqlite.db` and
+`/sess import essentials` reads EssentialsX `userdata/` + `warps/` — importing **homes,
+warps, nicknames, and balances** (balances deposited via Vault) into SEssentials' stores.
+Existing data is never overwritten; balances carry a once-only marker so a re-run can't
+double-deposit; all DB/file work runs off the main thread. CMI reads are schema-robust
+(columns/tables probed before use). (These read other plugins' **data files**; SEssentials
+contains none of their code.)
 
 ## Build
 
