@@ -139,7 +139,8 @@ final class Modules {
                 new dev.iyanz.sessentials.module.tpmenu.TpMenuModule(),
                 new dev.iyanz.sessentials.module.playerlist.PlayerListModule(),
                 new dev.iyanz.sessentials.module.kiteditor.KitEditorModule(),
-                new dev.iyanz.sessentials.module.nicheextras.NicheExtrasModule()
+                new dev.iyanz.sessentials.module.nicheextras.NicheExtrasModule(),
+                new dev.iyanz.sessentials.module.bedhome.BedHomeModule()
         );
     }
 }

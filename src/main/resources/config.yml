@@ -30,6 +30,9 @@ home:
   # Default max homes. Override per-rank with the permission sessentials.homes.<n>
   # (e.g. sessentials.homes.10 allows ten). The highest matching node wins.
   default-max: 3
+  # Sleeping in a bed auto-saves a home named "bed" there (bedhome module). This
+  # reserved home is overwritten each sleep and bypasses the max-home limit.
+  bed-home: true
 
 # Kits (/kit, /kits GUI).
 kits:
