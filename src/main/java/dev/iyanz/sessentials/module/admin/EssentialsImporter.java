@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import dev.iyanz.sessentials.SEssentialsPlugin;
+import dev.iyanz.sessentials.module.economyprovider.BalanceStore;
 import dev.iyanz.sessentials.store.YamlStore;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -18,10 +19,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
  *   <li><b>Nicknames</b> — {@code userdata/<uuid>.yml} {@code nickname}
  *       → {@code <uuid>.nick} in the {@code identity} store (legacy colour codes are
  *       fine — the nick module converts them on render);</li>
- *   <li><b>Balances</b> — {@code userdata/<uuid>.yml} {@code money} → deposited into the
- *       Vault economy (skipped when no economy is hooked). A marker under
- *       {@code balance.<uuid>} in the {@code import} store guarantees a player's balance
- *       is only ever deposited once across re-runs;</li>
+ *   <li><b>Balances</b> — {@code userdata/<uuid>.yml} {@code money} → written directly into
+ *       SEssentials' own {@code economy} store at {@code balances.<uuid>} (so a migration
+ *       populates our store even while CMI is still the active Vault provider). An existing
+ *       SEssentials balance is never overwritten, and a marker under {@code balance.<uuid>}
+ *       in the {@code import} store records the once-only migration;</li>
  *   <li><b>Warps</b> — {@code warps/<name>.yml} → {@code warps.<name>} in the
  *       {@code warp} store.</li>
  * </ul>
@@ -47,31 +49,27 @@ final class EssentialsImporter {
         String summary = "Essentials import done: " + users.homes() + " homes, "
                 + users.nicknames() + " nicknames, " + users.balances() + " balances, "
                 + warps + " warps.";
-        if (users.balanceSeen() && !plugin.economy().available()) {
-            summary += " Economy unavailable — balances skipped.";
-        }
         report.accept(summary);
     }
 
     /** Per-category results of the {@code userdata} pass. */
-    private record UserCounts(int homes, int nicknames, int balances, boolean balanceSeen) {
+    private record UserCounts(int homes, int nicknames, int balances) {
     }
 
     /** Single pass over {@code userdata/<uuid>.yml}: homes, nickname and money per player. */
     private UserCounts importUserdata(File userdata) {
         File[] files = userdata.listFiles((d, n) -> n.endsWith(".yml"));
         if (files == null) {
-            return new UserCounts(0, 0, 0, false);
+            return new UserCounts(0, 0, 0);
         }
         YamlStore homeStore = plugin.stores().get("home");
         YamlStore identity = plugin.stores().get("identity");
         YamlStore importLog = plugin.stores().get("import");
-        boolean economy = plugin.economy().available();
+        YamlStore economyStore = plugin.stores().get(BalanceStore.STORE);
 
         int homes = 0;
         int nicknames = 0;
         int balances = 0;
-        boolean balanceSeen = false;
 
         for (File file : files) {
             String uuid = file.getName().substring(0, file.getName().length() - 4);
@@ -114,18 +112,17 @@ final class EssentialsImporter {
                 } catch (NumberFormatException ex) {
                     amount = -1; // malformed — skip below
                 }
-                if (Double.isFinite(amount) && amount > 0) {
-                    balanceSeen = true;
-                    if (economy && depositOnce(importLog, uuid, amount)) {
-                        balances++;
-                    }
+                if (Double.isFinite(amount) && amount > 0
+                        && importBalance(economyStore, importLog, uuid, amount)) {
+                    balances++;
                 }
             }
         }
         homeStore.save();
         identity.save();
         importLog.save();
-        return new UserCounts(homes, nicknames, balances, balanceSeen);
+        economyStore.save();
+        return new UserCounts(homes, nicknames, balances);
     }
 
     private int importWarps(File warpsDir) {
@@ -153,22 +150,26 @@ final class EssentialsImporter {
     }
 
     /**
-     * Deposits {@code amount} into the player's Vault balance exactly once: a marker under
-     * {@code balance.<uuid>} in the {@code import} store blocks double-deposits across
-     * repeated imports (from any source).
+     * Writes {@code amount} into SEssentials' own {@code economy} store at
+     * {@code balances.<uuid>}, so the balance is migrated even while CMI is still the
+     * active Vault provider.
+     *
+     * <p>Idempotency is anchored on the economy store itself: if {@code balances.<uuid>}
+     * already exists it is <strong>never overwritten</strong> — that authoritative check
+     * (not the marker) is what prevents double-crediting, because it reflects the actual
+     * money on disk. If the run crashes before its final save, nothing was persisted and a
+     * re-run simply re-imports cleanly. A once-only marker under {@code balance.<uuid>} in
+     * the {@code import} store is also recorded for audit.</p>
+     *
+     * @return {@code true} if the balance was newly migrated
      */
-    private boolean depositOnce(YamlStore importLog, String uuid, double amount) {
-        String marker = "balance." + uuid;
-        if (importLog.contains(marker)) {
-            return false;
+    private boolean importBalance(YamlStore economyStore, YamlStore importLog, String uuid, double amount) {
+        String balancePath = BalanceStore.path(UUID.fromString(uuid));
+        if (economyStore.contains(balancePath)) {
+            return false; // existing SEssentials balance — never overwrite
         }
-        if (!plugin.economy().deposit(UUID.fromString(uuid), amount)) {
-            return false;
-        }
-        importLog.set(marker, "essentials:" + amount);
-        // Persist the marker durably per deposit (not just at end of run): a crash mid-loop
-        // must not lose a deposit's marker, or a re-import would double-credit the balance.
-        importLog.save();
+        economyStore.set(balancePath, Double.toString(amount));
+        importLog.set("balance." + uuid, "essentials:" + amount);
         return true;
     }
 

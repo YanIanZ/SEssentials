@@ -129,7 +129,8 @@ final class Modules {
                 new dev.iyanz.sessentials.module.itemadmin.ItemAdminModule(),
                 new dev.iyanz.sessentials.module.attributes.AttributesModule(),
                 new dev.iyanz.sessentials.module.staffextras.StaffExtrasModule(),
-                new dev.iyanz.sessentials.module.serverextras.ServerExtrasModule()
+                new dev.iyanz.sessentials.module.serverextras.ServerExtrasModule(),
+                new dev.iyanz.sessentials.module.economyprovider.EconomyProviderModule()
         );
     }
 }

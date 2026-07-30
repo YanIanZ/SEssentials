@@ -165,6 +165,21 @@ damage-indicator:
 #  Economy features
 # ----------------------------------------------------------------------------
 
+# Built-in economy provider (economyprovider module). SEssentials can serve as the
+# server's Vault economy backend from its own balance store (economy.yml). It registers
+# at Vault priority LOW, so while another provider such as CMI is installed that provider
+# stays active and these settings are dormant; once CMI is removed SEssentials becomes the
+# active provider and serves the migrated balances. Migrate balances first with
+# `/sess import cmi` (or `import essentials`) — that writes into this store directly.
+economy:
+  # Balance handed to an account the first time it is seen (when none exists yet).
+  starting-balance: 0.0
+  # Currency symbol shown before an amount, e.g. "$1,234.50 coins".
+  symbol: "$"
+  # Currency name shown after an amount (singular used only for exactly 1).
+  currency-singular: "coin"
+  currency-plural: "coins"
+
 # Coinflip gambling (coinflip module).
 coinflip:
   # Maximum bet per flip.

@@ -19,6 +19,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.iyanz.sessentials.SEssentialsPlugin;
+import dev.iyanz.sessentials.module.economyprovider.BalanceStore;
 import dev.iyanz.sessentials.store.YamlStore;
 
 /**
@@ -28,9 +29,11 @@ import dev.iyanz.sessentials.store.YamlStore;
  *       → {@code <uuid>.homes.<name>} in the {@code home} store;</li>
  *   <li><b>Nicknames</b> — {@code users.Nickname} → {@code <uuid>.nick} in the {@code identity}
  *       store (legacy colour codes are fine — the nick module converts them on render);</li>
- *   <li><b>Balances</b> — {@code users.Balance} → deposited into the Vault economy (skipped when
- *       no economy is hooked). A marker under {@code balance.<uuid>} in the {@code import} store
- *       guarantees a player's balance is only ever deposited once across re-runs;</li>
+ *   <li><b>Balances</b> — {@code users.Balance} → written directly into SEssentials' own
+ *       {@code economy} store at {@code balances.<uuid>} (so a migration populates our
+ *       store even while CMI is still the active Vault provider). An existing SEssentials
+ *       balance is never overwritten, and a marker under {@code balance.<uuid>} in the
+ *       {@code import} store records the once-only migration;</li>
  *   <li><b>Warps</b> — the {@code warps} table (name + {@code world:x:y:z:yaw:pitch} location)
  *       → {@code warps.<name>} in the {@code warp} store.</li>
  * </ul>
@@ -61,7 +64,7 @@ final class CmiImporter {
         YamlStore identity = plugin.stores().get("identity");
         YamlStore warpStore = plugin.stores().get("warp");
         YamlStore importLog = plugin.stores().get("import");
-        boolean economy = plugin.economy().available();
+        YamlStore economyStore = plugin.stores().get(BalanceStore.STORE);
 
         int users = 0;
         int homes = 0;
@@ -69,7 +72,6 @@ final class CmiImporter {
         int nicknames = 0;
         int balances = 0;
         int warps = 0;
-        boolean balanceSeen = false;
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath())) {
             Set<String> cols = columns(conn, "users");
@@ -120,11 +122,9 @@ final class CmiImporter {
 
                     if (hasBalance) {
                         double amount = rs.getDouble("Balance");
-                        if (!rs.wasNull() && Double.isFinite(amount) && amount > 0) {
-                            balanceSeen = true;
-                            if (economy && depositOnce(importLog, uuid, amount)) {
-                                balances++;
-                            }
+                        if (!rs.wasNull() && Double.isFinite(amount) && amount > 0
+                                && importBalance(economyStore, importLog, uuid, amount)) {
+                            balances++;
                         }
                     }
                 }
@@ -137,13 +137,11 @@ final class CmiImporter {
         identity.save();
         warpStore.save();
         importLog.save();
+        economyStore.save();
 
         String summary = "CMI import done (" + users + " users): " + homes + " homes ("
                 + homesSkipped + " already existed), " + nicknames + " nicknames, "
                 + balances + " balances, " + warps + " warps.";
-        if (balanceSeen && !economy) {
-            summary += " Economy unavailable — balances skipped.";
-        }
         report.accept(summary);
     }
 
@@ -222,30 +220,32 @@ final class CmiImporter {
     }
 
     /**
-     * Deposits {@code amount} into the player's Vault balance exactly once: a marker under
-     * {@code balance.<uuid>} in the {@code import} store blocks double-deposits across
-     * repeated imports (from any source).
+     * Writes {@code amount} into SEssentials' own {@code economy} store at
+     * {@code balances.<uuid>}, so the balance is migrated even while CMI is still the
+     * active Vault provider.
+     *
+     * <p>Idempotency is anchored on the economy store itself: if {@code balances.<uuid>}
+     * already exists it is <strong>never overwritten</strong> — that authoritative check
+     * (not the marker) is what prevents double-crediting, because it reflects the actual
+     * money on disk. If the run crashes before its final save, nothing was persisted and a
+     * re-run simply re-imports cleanly. A once-only marker under {@code balance.<uuid>} in
+     * the {@code import} store is also recorded for audit.</p>
+     *
+     * @return {@code true} if the balance was newly migrated
      */
-    private boolean depositOnce(YamlStore importLog, String uuid, double amount) {
-        String marker = "balance." + uuid;
-        if (importLog.contains(marker)) {
-            return false;
-        }
+    private boolean importBalance(YamlStore economyStore, YamlStore importLog, String uuid, double amount) {
         UUID id;
         try {
             id = UUID.fromString(uuid);
         } catch (IllegalArgumentException ex) {
             return false;
         }
-        if (!plugin.economy().deposit(id, amount)) {
-            return false;
+        String balancePath = BalanceStore.path(id);
+        if (economyStore.contains(balancePath)) {
+            return false; // existing SEssentials balance — never overwrite
         }
-        importLog.set(marker, "cmi:" + amount);
-        // Persist the marker durably RIGHT AFTER the deposit, not just at end of run():
-        // if the loop aborts mid-way (e.g. SQLITE_BUSY because CMI holds the db) and the
-        // server restarts, an in-memory-only marker would be lost and a re-run would
-        // double-deposit this player's balance.
-        importLog.save();
+        economyStore.set(balancePath, Double.toString(amount));
+        importLog.set("balance." + uuid, "cmi:" + amount);
         return true;
     }
 
