@@ -124,7 +124,12 @@ final class Modules {
                 new dev.iyanz.sessentials.module.sendspawn.SendSpawnModule(),
                 new dev.iyanz.sessentials.module.healall.HealAllModule(),
                 new dev.iyanz.sessentials.module.feedall.FeedAllModule(),
-                new dev.iyanz.sessentials.module.smite.SmiteModule()
+                new dev.iyanz.sessentials.module.smite.SmiteModule(),
+                new dev.iyanz.sessentials.module.sit.SitModule(),
+                new dev.iyanz.sessentials.module.itemadmin.ItemAdminModule(),
+                new dev.iyanz.sessentials.module.attributes.AttributesModule(),
+                new dev.iyanz.sessentials.module.staffextras.StaffExtrasModule(),
+                new dev.iyanz.sessentials.module.serverextras.ServerExtrasModule()
         );
     }
 }
